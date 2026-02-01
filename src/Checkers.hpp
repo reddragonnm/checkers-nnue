@@ -7,6 +7,7 @@ class Checkers {
 private:
     std::uint64_t m_darkPieces{};
     std::uint64_t m_lightPieces{};
+    std::uint64_t m_kingPieces{};
 
     // move/capture-x, from - xxxxxx (0 to 63), to - xxxxxx (0 to 63)
     std::vector<std::uint16_t> m_moves{};
@@ -35,6 +36,15 @@ public:
                     m_moves.push_back(i | (static_cast<std::uint64_t>(i - 7) << 6));
                 }
             }
+
+            std::uint64_t leftMoves{ (leftExMask & m_darkPieces) << 9 };
+            std::uint64_t validLeftMoves{ leftMoves & ~(m_darkPieces | m_lightPieces) };
+
+            for (int i{ 0 }; i < 64; i++) {
+                if ((static_cast<std::uint64_t>(1) << i) & validLeftMoves) {
+                    m_moves.push_back(i | (static_cast<std::uint64_t>(i - 9) << 6));
+                }
+            }
         }
         else {
             std::uint64_t rightMoves{ (rightExMask & m_lightPieces) >> 9 };
@@ -45,11 +55,52 @@ public:
                     m_moves.push_back(i | (static_cast<std::uint64_t>(i + 9) << 6));
                 }
             }
+
+            std::uint64_t leftMoves{ (leftExMask & m_lightPieces) >> 7 };
+            std::uint64_t validLeftMoves{ leftMoves & ~(m_darkPieces | m_lightPieces) };
+
+            for (int i{ 0 }; i < 64; i++) {
+                if ((static_cast<std::uint64_t>(1) << i) & validLeftMoves) {
+                    m_moves.push_back(i | (static_cast<std::uint64_t>(i + 7) << 6));
+                }
+            }
         }
     }
 
-    bool makeMove(int moveIdx) {
-        return true;
+    void makeMove(int moveIdx) {
+        if (isCaptureMove(m_moves[moveIdx])) {
+
+        }
+        else {
+            auto frSq{ getFromSquare(m_moves[moveIdx]) };
+            auto toSq{ getToSquare(m_moves[moveIdx]) };
+
+            auto idx{ static_cast<std::uint64_t>(1) };
+
+            if (m_darkTurn) {
+                m_darkPieces &= ~(idx << frSq);
+                m_darkPieces |= (idx << toSq);
+            }
+            else {
+                m_lightPieces &= ~(idx << frSq);
+                m_lightPieces |= (idx << toSq);
+            }
+
+            m_darkTurn = !m_darkTurn;
+            generateMoves();
+        }
+    }
+
+    bool isCaptureMove(std::uint16_t move) const {
+        return move & (1 << 13);
+    }
+
+    int getFromSquare(std::uint16_t move) const {
+        return static_cast<int>((move >> 6) & 0x3f);
+    }
+
+    int getToSquare(std::uint16_t move) const {
+        return static_cast<int>(move & 0x3f);
     }
 
     const std::uint64_t& getDarkPieces() const {

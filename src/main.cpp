@@ -61,12 +61,12 @@ void displayValidMoves(const Checkers& board, sf::RenderWindow& window, int sele
 
     for (const auto& move : moves) {
 
-        if (move & (1 << 13)) { // capture
+        if (board.isCaptureMove(move)) { // capture
 
         }
         else { // move
-            if (static_cast<int>(move >> 6) == 63 - selected) {
-                auto toSq{ 63 - static_cast<int>(0x3f & move) };
+            if (selected == 63 - board.getFromSquare(move)) {
+                auto toSq{ 63 - board.getToSquare(move) };
 
                 sf::RectangleShape rect{ {squareSize, squareSize} };
                 rect.setFillColor(sf::Color::Red);
@@ -79,6 +79,21 @@ void displayValidMoves(const Checkers& board, sf::RenderWindow& window, int sele
             }
         }
     }
+}
+
+bool attemptToMakeMove(int selected, int newPos, Checkers& board) {
+    if (selected == -1) return false;
+
+    auto moves{ board.getMoves() };
+
+    for (int i = 0; i < moves.size(); i++) {
+        if ((selected == 63 - static_cast<int>(moves[i] >> 6)) && (newPos == 63 - static_cast<int>(0x3f & moves[i]))) {
+            board.makeMove(i);
+            return true;
+        }
+    }
+
+    return false;
 }
 
 int main()
@@ -99,7 +114,10 @@ int main()
 
             else if (const auto* mouseButtonPressed = event->getIf<sf::Event::MouseButtonPressed>()) {
                 if (mouseButtonPressed->button == sf::Mouse::Button::Left) {
-                    selected = 8 * (mouseButtonPressed->position.y / squareSize) + (mouseButtonPressed->position.x / squareSize);
+                    int pos{ 8 * (mouseButtonPressed->position.y / squareSize) + (mouseButtonPressed->position.x / squareSize) };
+
+                    if (!attemptToMakeMove(selected, pos, board)) selected = pos;
+                    else selected = -1;
                 }
             }
         }
