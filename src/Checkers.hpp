@@ -3,11 +3,23 @@
 #include <cstdint>
 #include <vector>
 
+constexpr std::uint64_t rt{ 0xfefefefefefefe };
+constexpr std::uint64_t rt2{ 0xfcfcfcfcfcfc };
+
+constexpr std::uint64_t lt{ 0x7f7f7f7f7f7f7f };
+constexpr std::uint64_t lt2{ 0x3f3f3f3f3f3f };
+
+constexpr std::uint64_t rb{ 0xfefefefefefefe00 };
+constexpr std::uint64_t rb2{ 0xfcfcfcfcfcfc0000 };
+
+constexpr std::uint64_t lb{ 0x7f7f7f7f7f7f7f00 };
+constexpr std::uint64_t lb2{ 0x3f3f3f3f3f3f0000 };
+
 class Checkers {
 private:
     std::uint64_t m_darkPieces{};
     std::uint64_t m_lightPieces{};
-    std::uint64_t m_kingPieces{};
+    std::uint64_t m_kingPieces{  };
 
     // move/capture-x, from - xxxxxx (0 to 63), to - xxxxxx (0 to 63)
     std::vector<std::uint16_t> m_moves{};
@@ -21,49 +33,74 @@ public:
         m_lightPieces = static_cast<std::uint64_t>(0x55aa55) << 40;
     }
 
+    void generateRTMoves(std::uint64_t pieces) {
+        std::uint64_t moves{ (rt & pieces) << 7 };
+        std::uint64_t validMoves{ moves & ~(m_lightPieces | m_darkPieces) };
+
+        for (int i{ 0 }; i < 64; ++i) {
+            if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
+                m_moves.push_back(i | (static_cast<std::uint64_t>(i - 7) << 6));
+            }
+        }
+    }
+
+    void generateLTMoves(std::uint64_t pieces) {
+        std::uint64_t moves{ (lt & pieces) << 9 };
+        std::uint64_t validMoves{ moves & ~(m_lightPieces | m_darkPieces) };
+
+        for (int i{ 0 }; i < 64; i++) {
+            if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
+                m_moves.push_back(i | (static_cast<std::uint64_t>(i - 9) << 6));
+            }
+        }
+    }
+
+
+    void generateRBMoves(std::uint64_t pieces) {
+        std::uint64_t moves{ (rb & pieces) >> 9 };
+        std::uint64_t validMoves{ moves & ~(m_lightPieces | m_darkPieces) };
+
+        for (int i{ 0 }; i < 64; i++) {
+            if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
+                m_moves.push_back(i | (static_cast<std::uint64_t>(i + 9) << 6));
+            }
+        }
+    }
+
+    void generateLBMoves(std::uint64_t pieces) {
+        std::uint64_t moves{ (lb & pieces) >> 7 };
+        std::uint64_t validMoves{ moves & ~(m_lightPieces | m_darkPieces) };
+
+        for (int i{ 0 }; i < 64; i++) {
+            if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
+                m_moves.push_back(i | (static_cast<std::uint64_t>(i + 7) << 6));
+            }
+        }
+    }
+
     void generateMoves() {
         m_moves.clear();
 
-        std::uint64_t rightExMask{ 0xfefefefefefefefe };
-        std::uint64_t leftExMask{ 0x7f7f7f7f7f7f7f7f };
-
+        // generate movement moves
         if (m_darkTurn) {
-            std::uint64_t rightMoves{ (rightExMask & m_darkPieces) << 7 };
-            std::uint64_t validRightMoves{ rightMoves & ~(m_darkPieces | m_lightPieces) };
+            m_kingPieces |= m_darkPieces & 0xff00000000000000; // last row
 
-            for (int i{ 0 }; i < 64; i++) {
-                if ((static_cast<std::uint64_t>(1) << i) & validRightMoves) {
-                    m_moves.push_back(i | (static_cast<std::uint64_t>(i - 7) << 6));
-                }
-            }
+            generateRTMoves(m_darkPieces);
+            generateLTMoves(m_darkPieces);
 
-            std::uint64_t leftMoves{ (leftExMask & m_darkPieces) << 9 };
-            std::uint64_t validLeftMoves{ leftMoves & ~(m_darkPieces | m_lightPieces) };
+            generateLBMoves(m_darkPieces & m_kingPieces);
+            generateRBMoves(m_darkPieces & m_kingPieces);
 
-            for (int i{ 0 }; i < 64; i++) {
-                if ((static_cast<std::uint64_t>(1) << i) & validLeftMoves) {
-                    m_moves.push_back(i | (static_cast<std::uint64_t>(i - 9) << 6));
-                }
-            }
         }
         else {
-            std::uint64_t rightMoves{ (rightExMask & m_lightPieces) >> 9 };
-            std::uint64_t validRightMoves{ rightMoves & ~(m_darkPieces | m_lightPieces) };
+            m_kingPieces |= m_lightPieces & 0xff;
 
-            for (int i{ 0 }; i < 64; i++) {
-                if ((static_cast<std::uint64_t>(1) << i) & validRightMoves) {
-                    m_moves.push_back(i | (static_cast<std::uint64_t>(i + 9) << 6));
-                }
-            }
+            generateLBMoves(m_lightPieces);
+            generateRBMoves(m_lightPieces);
 
-            std::uint64_t leftMoves{ (leftExMask & m_lightPieces) >> 7 };
-            std::uint64_t validLeftMoves{ leftMoves & ~(m_darkPieces | m_lightPieces) };
+            generateRTMoves(m_lightPieces & m_kingPieces);
+            generateLTMoves(m_lightPieces & m_kingPieces);
 
-            for (int i{ 0 }; i < 64; i++) {
-                if ((static_cast<std::uint64_t>(1) << i) & validLeftMoves) {
-                    m_moves.push_back(i | (static_cast<std::uint64_t>(i + 7) << 6));
-                }
-            }
         }
     }
 
@@ -84,6 +121,11 @@ public:
             else {
                 m_lightPieces &= ~(idx << frSq);
                 m_lightPieces |= (idx << toSq);
+            }
+
+            if (m_kingPieces & (idx << frSq)) {
+                m_kingPieces &= ~(idx << frSq);
+                m_kingPieces |= (idx << toSq);
             }
 
             m_darkTurn = !m_darkTurn;
@@ -109,6 +151,10 @@ public:
 
     const std::uint64_t& getLightPieces() const {
         return m_lightPieces;
+    }
+
+    const std::uint64_t& getKingPieces() const {
+        return m_kingPieces;
     }
 
     const std::vector<std::uint16_t>& getMoves() const {

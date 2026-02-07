@@ -10,8 +10,8 @@ constexpr int squareSize{ 100 };
 void displayGrid(sf::RenderWindow& window) {
     static sf::RectangleShape rect{ {squareSize, squareSize} };
 
-    for (int i{ 0 }; i < 8; i++) {
-        for (int j{ 0 }; j < 8; j++) {
+    for (int i{ 0 }; i < 8; ++i) {
+        for (int j{ 0 }; j < 8; ++j) {
             rect.setFillColor(
                 ((i + j) % 2 == 0)
                 ? sf::Color{ 242, 218, 174 }
@@ -31,10 +31,11 @@ void displayBoard(const Checkers& board, sf::RenderWindow& window) {
     std::uint64_t idx{ 1 };
     auto darkBoard{ board.getDarkPieces() };
     auto lightBoard{ board.getLightPieces() };
+    auto kingPieces{ board.getKingPieces() };
 
 
     circle.setFillColor(sf::Color{ 80, 52, 41 });
-    for (int i{ 0 }; i < 64; i++) {
+    for (int i{ 0 }; i < 64; ++i) {
         if ((idx << i) & darkBoard) {
             circle.setPosition({
                 squareSize / 2.f + squareSize * ((63 - i) % 8),
@@ -45,7 +46,7 @@ void displayBoard(const Checkers& board, sf::RenderWindow& window) {
     }
 
     circle.setFillColor(sf::Color{ 219, 172, 126 });
-    for (int i{ 0 }; i < 64; i++) {
+    for (int i{ 0 }; i < 64; ++i) {
         if ((idx << i) & lightBoard) {
             circle.setPosition({
                 squareSize / 2.f + squareSize * ((63 - i) % 8),
@@ -54,12 +55,27 @@ void displayBoard(const Checkers& board, sf::RenderWindow& window) {
             window.draw(circle);
         }
     }
+
+    float circle2Radius{ 0.3f * static_cast<float>(squareSize) / 2.f };
+    sf::CircleShape circle2{ circle2Radius };
+    circle2.setOrigin({ circle2Radius, circle2Radius });
+    circle2.setFillColor(sf::Color::Yellow);
+    for (int i{ 0 }; i < 64; ++i) {
+        if ((idx << i) & kingPieces) {
+            circle2.setPosition({
+                squareSize / 2.f + squareSize * ((63 - i) % 8),
+                squareSize / 2.f + squareSize * ((63 - i) / 8)
+                });
+            window.draw(circle2);
+        }
+    }
 }
 
 void displayValidMoves(const Checkers& board, sf::RenderWindow& window, int selected) {
     auto moves{ board.getMoves() };
 
     for (const auto& move : moves) {
+
 
         if (board.isCaptureMove(move)) { // capture
 
@@ -86,7 +102,7 @@ bool attemptToMakeMove(int selected, int newPos, Checkers& board) {
 
     auto moves{ board.getMoves() };
 
-    for (int i = 0; i < moves.size(); i++) {
+    for (int i = 0; i < moves.size(); ++i) {
         if ((selected == 63 - static_cast<int>(moves[i] >> 6)) && (newPos == 63 - static_cast<int>(0x3f & moves[i]))) {
             board.makeMove(i);
             return true;
