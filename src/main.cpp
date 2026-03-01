@@ -75,10 +75,19 @@ void displayValidMoves(const Checkers& board, sf::RenderWindow& window, int sele
     auto moves{ board.getMoves() };
 
     for (const auto& move : moves) {
-
-
         if (board.isCaptureMove(move)) { // capture
+            if (selected == 63 - board.getFromSquare(move)) {
+                auto toSq{ 63 - board.getToSquare(move) };
 
+                sf::RectangleShape rect{ {squareSize, squareSize} };
+                rect.setFillColor(sf::Color::Red);
+                rect.setPosition({
+                    static_cast<float>(toSq % 8) * squareSize,
+                    static_cast<float>(toSq / 8) * squareSize
+                    });
+
+                window.draw(rect);
+            }
         }
         else { // move
             if (selected == 63 - board.getFromSquare(move)) {
@@ -101,9 +110,8 @@ bool attemptToMakeMove(int selected, int newPos, Checkers& board) {
     if (selected == -1) return false;
 
     auto moves{ board.getMoves() };
-
     for (int i = 0; i < moves.size(); ++i) {
-        if ((selected == 63 - static_cast<int>(moves[i] >> 6)) && (newPos == 63 - static_cast<int>(0x3f & moves[i]))) {
+        if ((selected == 63 - board.getFromSquare(moves[i])) && (newPos == 63 - board.getToSquare(moves[i]))) {
             board.makeMove(i);
             return true;
         }
