@@ -213,15 +213,19 @@ public:
                 generateRBCaptures(toSq);
             }
 
-            m_kingPieces &= ~frSq;
-            m_kingPieces &= ~midSq;
             if (m_kingPieces & frSq) {
+                m_kingPieces &= ~frSq;
+                m_kingPieces &= ~midSq;
                 m_kingPieces |= toSq;
 
-                generateLBCaptures(toSq);
-                generateRBCaptures(toSq);
-                generateRTCaptures(toSq);
-                generateLTCaptures(toSq);
+                if (m_darkTurn) {
+                    generateLBCaptures(toSq);
+                    generateRBCaptures(toSq);
+                }
+                else {
+                    generateRTCaptures(toSq);
+                    generateLTCaptures(toSq);
+                }
             }
 
             if (m_moves.empty()) { // no more captures left
@@ -239,8 +243,8 @@ public:
                 m_lightPieces |= toSq;
             }
 
-            m_kingPieces &= ~frSq;
             if (m_kingPieces & frSq) {
+                m_kingPieces &= ~frSq;
                 m_kingPieces |= toSq;
             }
 
