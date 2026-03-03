@@ -24,6 +24,7 @@ private:
     // move/capture-x, from - xxxxxx (0 to 63), to - xxxxxx (0 to 63)
     std::vector<std::uint16_t> m_moves{};
 
+    int m_drawCounter{ 0 };
     bool m_darkTurn{ true };
 
 public:
@@ -165,7 +166,7 @@ public:
         }
     }
 
-    void makeMove(int moveIdx) {
+    bool makeMove(int moveIdx) {
         // TODO: make this cleaner
         auto idx{ static_cast<std::uint64_t>(1) };
         auto move{ m_moves[moveIdx] };
@@ -177,9 +178,12 @@ public:
         auto toSq{ idx << t };
         auto midSq{ idx << ((f + t) / 2) };
 
+        m_drawCounter++;
+
         m_moves.clear();
 
         if (isCaptureMove(move)) {
+            m_drawCounter = 0;
             if (m_darkTurn) {
                 m_darkPieces &= ~frSq;
                 m_darkPieces |= toSq;
@@ -190,7 +194,7 @@ public:
                 if ((toSq & 0xff00000000000000) && !(frSq & m_kingPieces)) {
                     m_darkTurn = !m_darkTurn;
                     generateMoves();
-                    return; // if king is made capture chain is broken
+                    return true; // if king is made capture chain is broken
                 }
 
                 // now check if this piece can capture any further (assuming not king - handled separately)
@@ -206,7 +210,7 @@ public:
                 if ((toSq & 0xff) && !(frSq & m_kingPieces)) {// first row
                     m_darkTurn = !m_darkTurn;
                     generateMoves();
-                    return;
+                    return true;
                 }
 
                 generateLBCaptures(toSq);
@@ -237,10 +241,18 @@ public:
             if (m_darkTurn) {
                 m_darkPieces &= ~frSq;
                 m_darkPieces |= toSq;
+
+                if ((toSq & 0xff00000000000000) && !(frSq & m_kingPieces)) {
+                    m_drawCounter = 0;
+                }
             }
             else {
                 m_lightPieces &= ~frSq;
                 m_lightPieces |= toSq;
+
+                if ((toSq & 0xff) && !(frSq & m_kingPieces)) {
+                    m_drawCounter = 0;
+                }
             }
 
             if (m_kingPieces & frSq) {
@@ -250,7 +262,14 @@ public:
 
             m_darkTurn = !m_darkTurn;
             generateMoves();
+            return true;
         }
+
+        return false;
+    }
+
+    bool isDraw() {
+        return m_drawCounter == 80;
     }
 
     bool isCaptureMove(std::uint16_t move) const {
