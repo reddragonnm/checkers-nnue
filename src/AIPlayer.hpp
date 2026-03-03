@@ -29,6 +29,8 @@ public:
             s.push({ m_board, i , {} });
         }
 
+        int alpha{ -infinity };
+
         while (!s.empty()) {
             auto [board, moveIdx, curPath] = s.top();
             s.pop();
@@ -36,12 +38,14 @@ public:
             curPath.push_back(moveIdx);
 
             if (board.makeMove(moveIdx)) {
-                int score{ -negamax(-infinity, infinity, maxDepth - 1, board) };
+                int score{ -negamax(alpha, infinity, maxDepth - 1, board) };
 
                 if (score > bestScore) {
                     bestScore = score;
                     bestPath = curPath;
                 }
+
+                alpha = std::max(alpha, score);
             }
             else {
                 for (int i = board.getMoves().size() - 1; i >= 0; i--) {
@@ -85,7 +89,7 @@ public:
             board = curBoard;
 
             bestVal = std::max(bestVal, score);
-            if (score > alpha) alpha = score;
+            alpha = std::max(alpha, score);
             if (alpha >= beta) break;
         }
         return bestVal;

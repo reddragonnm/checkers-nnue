@@ -116,7 +116,6 @@ std::vector<int> attemptToMakeMove(int selected, int newPos, Checkers& board, AI
             if (!board.isDarkTurn()) {
                 auto aiMoves = ai.makeMove();
                 if (aiMoves.empty()) std::cout << "YOU WIN!\n";
-                else if (board.getMoves().empty()) std::cout << "AI WINS!\n";
                 return aiMoves;
             }
             else return {};
@@ -140,7 +139,7 @@ int main()
 
     std::vector<int> aiPendingMoves;
     sf::Clock aiTimer;
-    const sf::Time moveDelay = sf::milliseconds(500);
+    const sf::Time moveDelay{ sf::milliseconds(200) };
 
     while (window.isOpen())
     {
@@ -172,6 +171,11 @@ int main()
             aiTimer.restart();
         }
 
+        if (board.getMoves().empty() && board.isDarkTurn()) {
+            std::cout << "AI WINS!\n";
+            break;
+        }
+
         window.clear();
 
         displayGrid(window);
@@ -193,4 +197,6 @@ int main()
 
         window.display();
     }
+
+    window.close();
 }
