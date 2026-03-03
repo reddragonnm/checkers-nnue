@@ -1,9 +1,9 @@
 #include <SFML/Graphics.hpp>
 
 #include <iostream>
-#include <bitset>
 
 #include "Checkers.hpp"
+#include "AIPlayer.hpp"
 
 constexpr int squareSize{ 100 };
 
@@ -106,18 +106,24 @@ void displayValidMoves(const Checkers& board, sf::RenderWindow& window, int sele
     }
 }
 
-bool attemptToMakeMove(int selected, int newPos, Checkers& board) {
-    if (selected == -1) return false;
+std::vector<int> attemptToMakeMove(int selected, int newPos, Checkers& board, AIPlayer& ai) {
+    if (selected == -1) return {};
 
     auto moves{ board.getMoves() };
     for (int i = 0; i < moves.size(); ++i) {
         if ((selected == 63 - board.getFromSquare(moves[i])) && (newPos == 63 - board.getToSquare(moves[i]))) {
             board.makeMove(i);
-            return true;
+            if (!board.isDarkTurn()) {
+                auto aiMoves = ai.makeMove();
+                if (aiMoves.empty()) std::cout << "YOU WIN!\n";
+                else if (board.getMoves().empty()) std::cout << "AI WINS!\n";
+                return aiMoves;
+            }
+            else return {};
         }
     }
 
-    return false;
+    return {};
 }
 
 int main()
@@ -126,8 +132,15 @@ int main()
     constexpr int windowSize{ 8 * squareSize };
     sf::RenderWindow window(sf::VideoMode({ windowSize, windowSize }), "SFML");
 
+
     Checkers board{};
     board.generateMoves();
+
+    AIPlayer ai{ board, false };
+
+    std::vector<int> aiPendingMoves;
+    sf::Clock aiTimer;
+    const sf::Time moveDelay = sf::milliseconds(500);
 
     while (window.isOpen())
     {
@@ -140,10 +153,23 @@ int main()
                 if (mouseButtonPressed->button == sf::Mouse::Button::Left) {
                     int pos{ 8 * (mouseButtonPressed->position.y / squareSize) + (mouseButtonPressed->position.x / squareSize) };
 
-                    if (!attemptToMakeMove(selected, pos, board)) selected = pos;
-                    else selected = -1;
+                    std::vector<int> path{ attemptToMakeMove(selected, pos, board, ai) };
+                    if (!path.empty()) {
+                        aiPendingMoves = path;
+                        aiTimer.restart();
+                        selected = -1;
+                    }
+                    else {
+                        selected = pos;
+                    }
                 }
             }
+        }
+
+        if (!aiPendingMoves.empty() && aiTimer.getElapsedTime() > moveDelay) {
+            board.makeMove(aiPendingMoves.front());
+            aiPendingMoves.erase(aiPendingMoves.begin());
+            aiTimer.restart();
         }
 
         window.clear();

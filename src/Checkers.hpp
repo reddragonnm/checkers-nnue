@@ -81,7 +81,7 @@ public:
 
     void generateRTCaptures(std::uint64_t pieces) {
         // TODO: check double rt instead of rt2 speed/space
-        std::uint64_t oppPieces{ (pieces & m_darkPieces) ? m_lightPieces : m_darkPieces }; // pieces is subset of darkPieces (might be king)
+        std::uint64_t oppPieces{ m_darkTurn ? m_lightPieces : m_darkPieces };
         std::uint64_t check1{ ((rt2 & pieces) << 7) & oppPieces }; // check opp piece is present after one diagonal
         std::uint64_t validMoves{ (check1 << 7) & ~(m_lightPieces | m_darkPieces) }; // then valid only after empty at 2 diagonal
 
@@ -93,7 +93,7 @@ public:
     }
 
     void generateLTCaptures(std::uint64_t pieces) {
-        std::uint64_t oppPieces{ (pieces & m_darkPieces) ? m_lightPieces : m_darkPieces };
+        std::uint64_t oppPieces{ m_darkTurn ? m_lightPieces : m_darkPieces };
         std::uint64_t check1{ ((lt2 & pieces) << 9) & oppPieces };
         std::uint64_t validMoves{ (check1 << 9) & ~(m_lightPieces | m_darkPieces) };
 
@@ -105,7 +105,7 @@ public:
     }
 
     void generateRBCaptures(std::uint64_t pieces) {
-        std::uint64_t oppPieces{ (pieces & m_darkPieces) ? m_lightPieces : m_darkPieces };
+        std::uint64_t oppPieces{ m_darkTurn ? m_lightPieces : m_darkPieces };
         std::uint64_t check1{ ((rb2 & pieces) >> 9) & oppPieces };
         std::uint64_t validMoves{ (check1 >> 9) & ~(m_lightPieces | m_darkPieces) };
 
@@ -117,7 +117,7 @@ public:
     }
 
     void generateLBCaptures(std::uint64_t pieces) {
-        std::uint64_t oppPieces{ (pieces & m_darkPieces) ? m_lightPieces : m_darkPieces };
+        std::uint64_t oppPieces{ m_darkTurn ? m_lightPieces : m_darkPieces };
         std::uint64_t check1{ ((lb2 & pieces) >> 7) & oppPieces };
         std::uint64_t validMoves{ (check1 >> 7) & ~(m_lightPieces | m_darkPieces) };
 
@@ -217,9 +217,9 @@ public:
                 generateRBCaptures(toSq);
             }
 
+            m_kingPieces &= ~midSq;
             if (m_kingPieces & frSq) {
                 m_kingPieces &= ~frSq;
-                m_kingPieces &= ~midSq;
                 m_kingPieces |= toSq;
 
                 if (m_darkTurn) {
@@ -235,6 +235,7 @@ public:
             if (m_moves.empty()) { // no more captures left
                 m_darkTurn = !m_darkTurn;
                 generateMoves();
+                return true;
             }
         }
         else {

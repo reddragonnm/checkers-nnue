@@ -1,6 +1,8 @@
 #pragma once
 
 #include <stack>
+#include <iostream>
+
 #include "Checkers.hpp"
 
 constexpr int infinity{ 10000 };
@@ -9,40 +11,49 @@ class AIPlayer {
 private:
     bool m_darkPlayer;
     Checkers& m_board;
-    std::stack<int> m_moves;
 
 public:
     AIPlayer(Checkers& board, bool darkPlayer) : m_board(board), m_darkPlayer(darkPlayer) {
 
     }
 
-    void makeMove() {
-        int maxDepth{ 5 };
-        int bestMoveIdx{ 0 };
+    std::vector<int> makeMove() {
+        std::vector<int> bestPath;
+
+        int maxDepth{ 10 };
         int bestScore{ -infinity };
+        const auto moves{ m_board.getMoves() };
 
-        Checkers board{ m_board };
-        const auto moves{ board.getMoves() };
+        std::stack<std::tuple<Checkers, int, std::vector<int>>> s;
+        for (int i = moves.size() - 1; i >= 0; i--) {
+            s.push({ m_board, i , {} });
+        }
 
+        while (!s.empty()) {
+            auto [board, moveIdx, curPath] = s.top();
+            s.pop();
 
-        for (int i{ 0 }; i < moves.size(); i++) {
-            int score;
-            if (board.makeMove(i)) {
-                score = -negamax(-infinity, infinity, maxDepth - 1, board);
+            curPath.push_back(moveIdx);
+
+            if (board.makeMove(moveIdx)) {
+                int score{ -negamax(-infinity, infinity, maxDepth - 1, board) };
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestPath = curPath;
+                }
             }
             else {
-                score = negamax(-infinity, infinity, maxDepth, board);
-            }
-
-            board = m_board;
-
-            if (score > bestScore) {
-                bestScore = score;
-                bestMoveIdx = i;
+                for (int i = board.getMoves().size() - 1; i >= 0; i--) {
+                    s.push({ board, i, curPath });
+                }
             }
         }
 
-        m_board.makeMove(bestMoveIdx);
+        std::cout << "Best Score: " << bestScore << '\n';
+
+
+        return bestPath;
     }
 
     int evaluate(Checkers& board) {
