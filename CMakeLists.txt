@@ -20,6 +20,7 @@ target_link_libraries(main PRIVATE SFML::Graphics SFML::Network)
 
 add_executable(bench src/bench.cpp)
 target_compile_features(bench PRIVATE cxx_std_23)
-target_compile_options(bench PRIVATE -O3)
+target_compile_options(bench PRIVATE -O3 -march=native)
+target_compile_definitions(bench PRIVATE NDEBUG)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT main)

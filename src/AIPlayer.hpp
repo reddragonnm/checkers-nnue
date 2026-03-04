@@ -38,22 +38,22 @@ class AIPlayer {
             int bestScore{-infinity};
             const auto moves{m_board.getMoves()};
 
-            std::stack<std::tuple<Checkers, int, std::vector<int>>> s;
+            std::stack<std::tuple<int, std::vector<int>>> s;
             for (int i = moves.size() - 1; i >= 0; i--) {
-                s.push({m_board, i, {}});
+                s.push({i, {}});
             }
 
             int alpha{-infinity};
 
             while (!s.empty()) {
-                auto [board, moveIdx, curPath] = s.top();
+                auto [moveIdx, curPath] = s.top();
                 s.pop();
 
                 curPath.push_back(moveIdx);
 
-                if (board.makeMove(moveIdx)) {
+                if (m_board.makeMove(moveIdx)) {
                     m_nodesHit++;
-                    int score{-negamax(-infinity, -alpha, d - 1, board)};
+                    int score{-negamax(-infinity, -alpha, d - 1, m_board)};
 
                     if (score > bestScore) {
                         bestScore = score;
@@ -62,10 +62,11 @@ class AIPlayer {
 
                     alpha = std::max(alpha, score);
                 } else {
-                    for (int i = board.getMoves().size() - 1; i >= 0; i--) {
-                        s.push({board, i, curPath});
+                    for (int i = m_board.getMoves().size() - 1; i >= 0; i--) {
+                        s.push({i, curPath});
                     }
                 }
+                m_board.undoMove();
             }
         }
 
@@ -81,8 +82,8 @@ class AIPlayer {
         return board.isDarkTurn() ? (dark - light) : (light - dark);
     }
 
-    int negamax(int alpha, int beta, int depth, Checkers& curBoard) {
-        std::uint64_t hash{curBoard.hash()};
+    int negamax(int alpha, int beta, int depth, Checkers& board) {
+        std::uint64_t hash{board.hash()};
         TTEntry& entry{tt[hash & (ttSize - 1)]};
 
         if (entry.key == hash && entry.depth >= depth) {
@@ -98,7 +99,6 @@ class AIPlayer {
         if (entry.key == hash)
             hashMove = entry.move;
 
-        Checkers board{curBoard};
         const auto moves{board.getMoves()};
 
         if (board.isDraw())
@@ -127,7 +127,7 @@ class AIPlayer {
                     score = negamax(alpha, beta, depth, board);
                 }
 
-                board = curBoard;
+                board.undoMove();
 
                 if (score > bestVal) {
                     bestVal = score;

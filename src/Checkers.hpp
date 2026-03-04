@@ -20,6 +20,17 @@ constexpr std::uint64_t lb2{0x3f3f3f3f3f3f0000};
 
 using ZobristTable = std::array<std::array<std::uint64_t, 64>, 4>;
 
+struct State {
+    std::uint64_t dark;
+    std::uint64_t light;
+    std::uint64_t king;
+
+    std::vector<std::uint16_t> moves;
+    int drawCounter;
+    bool darkTurn;
+    std::uint64_t hash;
+};
+
 class Checkers {
   private:
     std::uint64_t m_darkPieces{};
@@ -36,6 +47,8 @@ class Checkers {
     std::uint64_t m_zobristSide;
 
     std::uint64_t m_hash;
+
+    std::vector<State> m_history;
 
     void initZobrist() {
         std::mt19937_64 rng(123456);
@@ -217,8 +230,27 @@ class Checkers {
         generateMoves();
     }
 
+    void undoMove() {
+        if (!m_history.empty()) {
+            auto top = m_history.back();
+            m_history.pop_back();
+
+            m_darkPieces = top.dark;
+            m_lightPieces = top.light;
+            m_kingPieces = top.king;
+            m_moves = top.moves;
+            m_drawCounter = top.drawCounter;
+            m_darkTurn = top.darkTurn;
+            m_hash = top.hash;
+        }
+    }
+
     bool makeMove(int moveIdx) {
         // TODO: make this cleaner
+
+        m_history.emplace_back(m_darkPieces, m_lightPieces, m_kingPieces, m_moves, m_drawCounter,
+                               m_darkTurn, m_hash);
+
         auto idx{static_cast<std::uint64_t>(1)};
         auto move{m_moves[moveIdx]};
 
