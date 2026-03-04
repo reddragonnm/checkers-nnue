@@ -1,5 +1,3 @@
-#pragma once
-
 #include <iostream>
 #include <chrono>
 #include <iomanip>
@@ -7,7 +5,9 @@
 #include "Checkers.hpp"
 #include "AIPlayer.hpp"
 
-int bench(int maxDepth = 10) {
+int main() {
+    int maxDepth {15};
+
     Checkers board{};
     AIPlayer ai{ board };
 

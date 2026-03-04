@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stack>
-#include <iostream>
+#include <cassert>
 
 #include "Checkers.hpp"
 
@@ -83,6 +83,15 @@ public:
     }
 
     int negamax(int alpha, int beta, int depth, Checkers& curBoard) {
+        std::uint64_t hash {curBoard.hash()};
+        TTEntry& entry {tt[hash & (ttSize - 1)]};
+
+        if (entry.key == hash && entry.depth >= depth) {
+            if (entry.flag == TTExact) return entry.score;
+            if (entry.flag == TTLower && entry.score >= beta) return entry.score;
+            if (entry.flag == TTUpper && entry.score <= alpha) return entry.score;
+        }
+
         Checkers board{ curBoard };
         const auto moves{ board.getMoves() };
 
@@ -90,7 +99,9 @@ public:
         if (moves.empty()) return -infinity + depth;
         if (depth == 0) return evaluate(board);
 
+        int alphaOrg{ alpha };
         int bestVal{ -infinity };
+        int bestMove {-1};
 
         for (int i{ 0 }; i < moves.size(); i++) {
             int score;
@@ -104,10 +115,27 @@ public:
 
             board = curBoard;
 
-            bestVal = std::max(bestVal, score);
+            if (score > bestVal) {
+                bestVal = score;
+                bestMove = i;
+            }
+
             alpha = std::max(alpha, score);
             if (alpha >= beta) break;
         }
+
+        entry.key = hash;
+        entry.depth = depth;
+        entry.score = bestVal;
+        entry.move = bestMove;
+
+        if (bestVal <= alphaOrg)
+            entry.flag = TTUpper; // at most this good, could be worse but we cut early
+        else if (bestVal >= beta)
+            entry.flag = TTLower; // at least this good, could be better but we cut early
+        else
+            entry.flag = TTExact; // actual evalutation reached
+
         return bestVal;
     }
 

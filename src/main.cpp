@@ -4,7 +4,6 @@
 
 #include "Checkers.hpp"
 #include "AIPlayer.hpp"
-#include "bench.hpp"
 
 constexpr int squareSize{ 100 };
 
@@ -128,8 +127,6 @@ std::vector<int> attemptToMakeMove(int selected, int newPos, Checkers& board, AI
 
 int main()
 {
-    bench(11);
-
     int selected{ -1 };
     constexpr int windowSize{ 8 * squareSize };
     sf::RenderWindow window(sf::VideoMode({ windowSize, windowSize }), "SFML");
@@ -170,11 +167,6 @@ int main()
             board.makeMove(aiPendingMoves.front());
             aiPendingMoves.erase(aiPendingMoves.begin());
             aiTimer.restart();
-        }
-
-        if (board.getMoves().empty() && board.isDarkTurn()) {
-            std::cout << "AI WINS!\n";
-            break;
         }
 
         window.clear();

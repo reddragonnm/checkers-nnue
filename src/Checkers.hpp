@@ -4,6 +4,7 @@
 #include <vector>
 #include <array>
 #include <random>
+#include <cassert>
 
 constexpr std::uint64_t rt{ 0xfefefefefefefe };
 constexpr std::uint64_t rt2{ 0xfcfcfcfcfcfc };
