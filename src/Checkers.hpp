@@ -90,45 +90,49 @@ class Checkers {
 
     void generateRTMoves(std::uint64_t pieces) {
         std::uint64_t moves{(rt & pieces) << 7};
-        std::uint64_t validMoves{moves & ~(m_lightPieces | m_darkPieces)};
+        moves &= ~(m_lightPieces | m_darkPieces);
 
-        for (int i{0}; i < 64; ++i) {
-            if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
-                m_moves.push_back(i | (static_cast<std::uint64_t>(i - 7) << 6));
-            }
+        while (moves) {
+            int i{__builtin_ctzll(moves)};
+            moves &= moves - 1;
+
+            m_moves.push_back(i | ((i - 7) << 6));
         }
     }
 
     void generateLTMoves(std::uint64_t pieces) {
         std::uint64_t moves{(lt & pieces) << 9};
-        std::uint64_t validMoves{moves & ~(m_lightPieces | m_darkPieces)};
+        moves &= ~(m_lightPieces | m_darkPieces);
 
-        for (int i{0}; i < 64; i++) {
-            if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
-                m_moves.push_back(i | (static_cast<std::uint64_t>(i - 9) << 6));
-            }
+        while (moves) {
+            int i{__builtin_ctzll(moves)};
+            moves &= moves - 1;
+
+            m_moves.push_back(i | ((i - 9) << 6));
         }
     }
 
     void generateRBMoves(std::uint64_t pieces) {
         std::uint64_t moves{(rb & pieces) >> 9};
-        std::uint64_t validMoves{moves & ~(m_lightPieces | m_darkPieces)};
+        moves &= ~(m_lightPieces | m_darkPieces);
 
-        for (int i{0}; i < 64; i++) {
-            if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
-                m_moves.push_back(i | (static_cast<std::uint64_t>(i + 9) << 6));
-            }
+        while (moves) {
+            int i{__builtin_ctzll(moves)};
+            moves &= moves - 1;
+
+            m_moves.push_back(i | ((i + 9) << 6));
         }
     }
 
     void generateLBMoves(std::uint64_t pieces) {
         std::uint64_t moves{(lb & pieces) >> 7};
-        std::uint64_t validMoves{moves & ~(m_lightPieces | m_darkPieces)};
+        moves &= ~(m_lightPieces | m_darkPieces);
 
-        for (int i{0}; i < 64; i++) {
-            if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
-                m_moves.push_back(i | (static_cast<std::uint64_t>(i + 7) << 6));
-            }
+        while (moves) {
+            int i{__builtin_ctzll(moves)};
+            moves &= moves - 1;
+
+            m_moves.push_back(i | ((i + 7) << 6));
         }
     }
 
@@ -137,50 +141,54 @@ class Checkers {
         std::uint64_t oppPieces{m_darkTurn ? m_lightPieces : m_darkPieces};
         std::uint64_t check1{((rt2 & pieces) << 7) &
                              oppPieces}; // check opp piece is present after one diagonal
-        std::uint64_t validMoves{
+        std::uint64_t moves{
             (check1 << 7) &
             ~(m_lightPieces | m_darkPieces)}; // then valid only after empty at 2 diagonal
 
-        for (int i{0}; i < 64; i++) {
-            if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
-                m_moves.push_back(i | (static_cast<std::uint64_t>(i - 14) << 6 | (1 << 12)));
-            }
+        while (moves) {
+            int i{__builtin_ctzll(moves)};
+            moves &= moves - 1;
+
+            m_moves.push_back(i | ((i - 14) << 6) | (1 << 12));
         }
     }
 
     void generateLTCaptures(std::uint64_t pieces) {
         std::uint64_t oppPieces{m_darkTurn ? m_lightPieces : m_darkPieces};
         std::uint64_t check1{((lt2 & pieces) << 9) & oppPieces};
-        std::uint64_t validMoves{(check1 << 9) & ~(m_lightPieces | m_darkPieces)};
+        std::uint64_t moves{(check1 << 9) & ~(m_lightPieces | m_darkPieces)};
 
-        for (int i{0}; i < 64; i++) {
-            if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
-                m_moves.push_back(i | (static_cast<std::uint64_t>(i - 18) << 6 | (1 << 12)));
-            }
+        while (moves) {
+            int i{__builtin_ctzll(moves)};
+            moves &= moves - 1;
+
+            m_moves.push_back(i | ((i - 18) << 6) | (1 << 12));
         }
     }
 
     void generateRBCaptures(std::uint64_t pieces) {
         std::uint64_t oppPieces{m_darkTurn ? m_lightPieces : m_darkPieces};
         std::uint64_t check1{((rb2 & pieces) >> 9) & oppPieces};
-        std::uint64_t validMoves{(check1 >> 9) & ~(m_lightPieces | m_darkPieces)};
+        std::uint64_t moves{(check1 >> 9) & ~(m_lightPieces | m_darkPieces)};
 
-        for (int i{0}; i < 64; i++) {
-            if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
-                m_moves.push_back(i | (static_cast<std::uint64_t>(i + 18) << 6 | (1 << 12)));
-            }
+        while (moves) {
+            int i{__builtin_ctzll(moves)};
+            moves &= moves - 1;
+
+            m_moves.push_back(i | ((i + 18) << 6) | (1 << 12));
         }
     }
 
     void generateLBCaptures(std::uint64_t pieces) {
         std::uint64_t oppPieces{m_darkTurn ? m_lightPieces : m_darkPieces};
         std::uint64_t check1{((lb2 & pieces) >> 7) & oppPieces};
-        std::uint64_t validMoves{(check1 >> 7) & ~(m_lightPieces | m_darkPieces)};
+        std::uint64_t moves{(check1 >> 7) & ~(m_lightPieces | m_darkPieces)};
 
-        for (int i{0}; i < 64; i++) {
-            if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
-                m_moves.push_back(i | (static_cast<std::uint64_t>(i + 14) << 6 | (1 << 12)));
-            }
+        while (moves) {
+            int i{__builtin_ctzll(moves)};
+            moves &= moves - 1;
+
+            m_moves.push_back(i | ((i + 14) << 6) | (1 << 12));
         }
     }
 
