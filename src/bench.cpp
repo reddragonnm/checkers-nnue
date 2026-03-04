@@ -7,7 +7,7 @@
 #include "AIPlayer.hpp"
 
 int main() {
-    int maxDepth{18};
+    int maxDepth{20};
 
     Checkers board{};
     AIPlayer ai{board};
@@ -18,7 +18,7 @@ int main() {
 
     std::cout << "----------------------------------------------\n";
 
-    for (int depth = maxDepth; depth <= maxDepth; depth++) {
+    for (int depth = 1; depth <= maxDepth; depth++) {
         std::memset(tt.data(), 0, tt.size() * sizeof(TTEntry));
 
         auto start = std::chrono::high_resolution_clock::now();

@@ -69,6 +69,34 @@ class AIPlayer {
         return board.isDarkTurn() ? (dark - light) : (light - dark);
     }
 
+    int quiscence(int alpha, int beta, Checkers& board) {
+        int eval{evaluate(board)};
+
+        if (eval >= beta)
+            return beta;
+        alpha = std::max(alpha, eval);
+
+        const int numMoves{board.getNumMoves()};
+        if (numMoves == 0 || !board.isCaptureMove(board.getMoves()[0]))
+            return eval;
+
+        for (int i{0}; i < numMoves; i++) {
+            int score;
+            if (board.makeMove(i)) {
+                score = -quiscence(-beta, -alpha, board);
+            } else {
+                score = quiscence(alpha, beta, board);
+            }
+            board.undoMove();
+
+            if (score >= beta)
+                return score;
+            eval = std::max(eval, score);
+            alpha = std::max(alpha, score);
+        }
+        return eval;
+    }
+
     int negamax(int alpha, int beta, int depth, Checkers& board) {
         std::uint64_t hash{board.hash()};
         TTEntry& entry{tt[hash & (ttSize - 1)]};
@@ -93,7 +121,7 @@ class AIPlayer {
         if (numMoves == 0)
             return -infinity + depth;
         if (depth == 0)
-            return evaluate(board);
+            return quiscence(alpha, beta, board);
 
         int alphaOrg{alpha};
         int bestVal{-infinity};
