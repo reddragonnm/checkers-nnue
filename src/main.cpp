@@ -4,6 +4,7 @@
 
 #include "Checkers.hpp"
 #include "AIPlayer.hpp"
+#include "bench.hpp"
 
 constexpr int squareSize{ 100 };
 
@@ -114,7 +115,7 @@ std::vector<int> attemptToMakeMove(int selected, int newPos, Checkers& board, AI
         if ((selected == 63 - board.getFromSquare(moves[i])) && (newPos == 63 - board.getToSquare(moves[i]))) {
             board.makeMove(i);
             if (!board.isDarkTurn()) {
-                auto aiMoves = ai.makeMove();
+                auto aiMoves = ai.search();
                 if (aiMoves.empty()) std::cout << "YOU WIN!\n";
                 return aiMoves;
             }
@@ -127,13 +128,15 @@ std::vector<int> attemptToMakeMove(int selected, int newPos, Checkers& board, AI
 
 int main()
 {
+    bench(11);
+
     int selected{ -1 };
     constexpr int windowSize{ 8 * squareSize };
     sf::RenderWindow window(sf::VideoMode({ windowSize, windowSize }), "SFML");
 
 
     Checkers board{};
-    AIPlayer ai{ board, false };
+    AIPlayer ai{ board };
 
     std::vector<int> aiPendingMoves;
     sf::Clock aiTimer;
@@ -195,6 +198,4 @@ int main()
 
         window.display();
     }
-
-    window.close();
 }

@@ -7,20 +7,37 @@
 
 constexpr int infinity{ 10000 };
 
+enum {
+    TTExact,
+    TTUpper,
+    TTLower
+};
+
+struct TTEntry {
+    std::uint64_t key;
+    int depth;
+    int score;
+    std::uint16_t move;
+    std::uint8_t flag;
+};
+
+constexpr int ttSize{ 1 << 22 };
+std::vector<TTEntry> tt(ttSize);
+
 class AIPlayer {
 private:
-    bool m_darkPlayer;
     Checkers& m_board;
+    int m_nodesHit;
 
 public:
-    AIPlayer(Checkers& board, bool darkPlayer) : m_board(board), m_darkPlayer(darkPlayer) {
+    AIPlayer(Checkers& board) : m_board(board), m_nodesHit(0) {
 
     }
 
-    std::vector<int> makeMove() {
+    std::vector<int> search(int maxDepth = 10) {
+        m_nodesHit = 0;
         std::vector<int> bestPath;
 
-        int maxDepth{ 10 };
         int bestScore{ -infinity };
         const auto moves{ m_board.getMoves() };
 
@@ -38,6 +55,7 @@ public:
             curPath.push_back(moveIdx);
 
             if (board.makeMove(moveIdx)) {
+                m_nodesHit++;
                 int score{ -negamax(alpha, infinity, maxDepth - 1, board) };
 
                 if (score > bestScore) {
@@ -53,9 +71,6 @@ public:
                 }
             }
         }
-
-        std::cout << "Best Score: " << bestScore << '\n';
-
 
         return bestPath;
     }
@@ -80,6 +95,7 @@ public:
         for (int i{ 0 }; i < moves.size(); i++) {
             int score;
             if (board.makeMove(i)) { // turn switched
+                m_nodesHit++;
                 score = -negamax(-beta, -alpha, depth - 1, board);
             }
             else {
@@ -93,5 +109,9 @@ public:
             if (alpha >= beta) break;
         }
         return bestVal;
+    }
+
+    int getNodesHit() {
+        return m_nodesHit;
     }
 };

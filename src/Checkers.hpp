@@ -233,7 +233,7 @@ public:
 
         m_moves.clear();
 
-        bool wasKing{ frSq & m_kingPieces };
+        bool wasKing{ static_cast<bool>(frSq & m_kingPieces) };
 
         if (isCaptureMove(move)) {
             m_drawCounter = 0;
