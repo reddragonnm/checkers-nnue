@@ -6,22 +6,22 @@
 #include <random>
 #include <cassert>
 
-constexpr std::uint64_t rt{ 0xfefefefefefefe };
-constexpr std::uint64_t rt2{ 0xfcfcfcfcfcfc };
+constexpr std::uint64_t rt{0xfefefefefefefe};
+constexpr std::uint64_t rt2{0xfcfcfcfcfcfc};
 
-constexpr std::uint64_t lt{ 0x7f7f7f7f7f7f7f };
-constexpr std::uint64_t lt2{ 0x3f3f3f3f3f3f };
+constexpr std::uint64_t lt{0x7f7f7f7f7f7f7f};
+constexpr std::uint64_t lt2{0x3f3f3f3f3f3f};
 
-constexpr std::uint64_t rb{ 0xfefefefefefefe00 };
-constexpr std::uint64_t rb2{ 0xfcfcfcfcfcfc0000 };
+constexpr std::uint64_t rb{0xfefefefefefefe00};
+constexpr std::uint64_t rb2{0xfcfcfcfcfcfc0000};
 
-constexpr std::uint64_t lb{ 0x7f7f7f7f7f7f7f00 };
-constexpr std::uint64_t lb2{ 0x3f3f3f3f3f3f0000 };
+constexpr std::uint64_t lb{0x7f7f7f7f7f7f7f00};
+constexpr std::uint64_t lb2{0x3f3f3f3f3f3f0000};
 
 using ZobristTable = std::array<std::array<std::uint64_t, 64>, 4>;
 
 class Checkers {
-private:
+  private:
     std::uint64_t m_darkPieces{};
     std::uint64_t m_lightPieces{};
     std::uint64_t m_kingPieces{};
@@ -29,8 +29,8 @@ private:
     // move/capture-x, from - xxxxxx (0 to 63), to - xxxxxx (0 to 63)
     std::vector<std::uint16_t> m_moves{};
 
-    int m_drawCounter{ 0 };
-    bool m_darkTurn{ true };
+    int m_drawCounter{0};
+    bool m_darkTurn{true};
 
     ZobristTable m_zobrist;
     std::uint64_t m_zobristSide;
@@ -52,7 +52,7 @@ private:
     std::uint64_t computeHash() {
         std::uint64_t h = 0;
         for (int i = 0; i < 64; i++) {
-            std::uint64_t mask{ static_cast<std::uint64_t>(1) << i };
+            std::uint64_t mask{static_cast<std::uint64_t>(1) << i};
 
             if (mask & m_darkPieces) {
                 if (mask & m_kingPieces)
@@ -76,10 +76,10 @@ private:
     }
 
     void generateRTMoves(std::uint64_t pieces) {
-        std::uint64_t moves{ (rt & pieces) << 7 };
-        std::uint64_t validMoves{ moves & ~(m_lightPieces | m_darkPieces) };
+        std::uint64_t moves{(rt & pieces) << 7};
+        std::uint64_t validMoves{moves & ~(m_lightPieces | m_darkPieces)};
 
-        for (int i{ 0 }; i < 64; ++i) {
+        for (int i{0}; i < 64; ++i) {
             if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
                 m_moves.push_back(i | (static_cast<std::uint64_t>(i - 7) << 6));
             }
@@ -87,22 +87,21 @@ private:
     }
 
     void generateLTMoves(std::uint64_t pieces) {
-        std::uint64_t moves{ (lt & pieces) << 9 };
-        std::uint64_t validMoves{ moves & ~(m_lightPieces | m_darkPieces) };
+        std::uint64_t moves{(lt & pieces) << 9};
+        std::uint64_t validMoves{moves & ~(m_lightPieces | m_darkPieces)};
 
-        for (int i{ 0 }; i < 64; i++) {
+        for (int i{0}; i < 64; i++) {
             if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
                 m_moves.push_back(i | (static_cast<std::uint64_t>(i - 9) << 6));
             }
         }
     }
 
-
     void generateRBMoves(std::uint64_t pieces) {
-        std::uint64_t moves{ (rb & pieces) >> 9 };
-        std::uint64_t validMoves{ moves & ~(m_lightPieces | m_darkPieces) };
+        std::uint64_t moves{(rb & pieces) >> 9};
+        std::uint64_t validMoves{moves & ~(m_lightPieces | m_darkPieces)};
 
-        for (int i{ 0 }; i < 64; i++) {
+        for (int i{0}; i < 64; i++) {
             if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
                 m_moves.push_back(i | (static_cast<std::uint64_t>(i + 9) << 6));
             }
@@ -110,10 +109,10 @@ private:
     }
 
     void generateLBMoves(std::uint64_t pieces) {
-        std::uint64_t moves{ (lb & pieces) >> 7 };
-        std::uint64_t validMoves{ moves & ~(m_lightPieces | m_darkPieces) };
+        std::uint64_t moves{(lb & pieces) >> 7};
+        std::uint64_t validMoves{moves & ~(m_lightPieces | m_darkPieces)};
 
-        for (int i{ 0 }; i < 64; i++) {
+        for (int i{0}; i < 64; i++) {
             if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
                 m_moves.push_back(i | (static_cast<std::uint64_t>(i + 7) << 6));
             }
@@ -122,11 +121,14 @@ private:
 
     void generateRTCaptures(std::uint64_t pieces) {
         // TODO: check double rt instead of rt2 speed/space
-        std::uint64_t oppPieces{ m_darkTurn ? m_lightPieces : m_darkPieces };
-        std::uint64_t check1{ ((rt2 & pieces) << 7) & oppPieces }; // check opp piece is present after one diagonal
-        std::uint64_t validMoves{ (check1 << 7) & ~(m_lightPieces | m_darkPieces) }; // then valid only after empty at 2 diagonal
+        std::uint64_t oppPieces{m_darkTurn ? m_lightPieces : m_darkPieces};
+        std::uint64_t check1{((rt2 & pieces) << 7) &
+                             oppPieces}; // check opp piece is present after one diagonal
+        std::uint64_t validMoves{
+            (check1 << 7) &
+            ~(m_lightPieces | m_darkPieces)}; // then valid only after empty at 2 diagonal
 
-        for (int i{ 0 }; i < 64; i++) {
+        for (int i{0}; i < 64; i++) {
             if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
                 m_moves.push_back(i | (static_cast<std::uint64_t>(i - 14) << 6 | (1 << 12)));
             }
@@ -134,11 +136,11 @@ private:
     }
 
     void generateLTCaptures(std::uint64_t pieces) {
-        std::uint64_t oppPieces{ m_darkTurn ? m_lightPieces : m_darkPieces };
-        std::uint64_t check1{ ((lt2 & pieces) << 9) & oppPieces };
-        std::uint64_t validMoves{ (check1 << 9) & ~(m_lightPieces | m_darkPieces) };
+        std::uint64_t oppPieces{m_darkTurn ? m_lightPieces : m_darkPieces};
+        std::uint64_t check1{((lt2 & pieces) << 9) & oppPieces};
+        std::uint64_t validMoves{(check1 << 9) & ~(m_lightPieces | m_darkPieces)};
 
-        for (int i{ 0 }; i < 64; i++) {
+        for (int i{0}; i < 64; i++) {
             if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
                 m_moves.push_back(i | (static_cast<std::uint64_t>(i - 18) << 6 | (1 << 12)));
             }
@@ -146,11 +148,11 @@ private:
     }
 
     void generateRBCaptures(std::uint64_t pieces) {
-        std::uint64_t oppPieces{ m_darkTurn ? m_lightPieces : m_darkPieces };
-        std::uint64_t check1{ ((rb2 & pieces) >> 9) & oppPieces };
-        std::uint64_t validMoves{ (check1 >> 9) & ~(m_lightPieces | m_darkPieces) };
+        std::uint64_t oppPieces{m_darkTurn ? m_lightPieces : m_darkPieces};
+        std::uint64_t check1{((rb2 & pieces) >> 9) & oppPieces};
+        std::uint64_t validMoves{(check1 >> 9) & ~(m_lightPieces | m_darkPieces)};
 
-        for (int i{ 0 }; i < 64; i++) {
+        for (int i{0}; i < 64; i++) {
             if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
                 m_moves.push_back(i | (static_cast<std::uint64_t>(i + 18) << 6 | (1 << 12)));
             }
@@ -158,11 +160,11 @@ private:
     }
 
     void generateLBCaptures(std::uint64_t pieces) {
-        std::uint64_t oppPieces{ m_darkTurn ? m_lightPieces : m_darkPieces };
-        std::uint64_t check1{ ((lb2 & pieces) >> 7) & oppPieces };
-        std::uint64_t validMoves{ (check1 >> 7) & ~(m_lightPieces | m_darkPieces) };
+        std::uint64_t oppPieces{m_darkTurn ? m_lightPieces : m_darkPieces};
+        std::uint64_t check1{((lb2 & pieces) >> 7) & oppPieces};
+        std::uint64_t validMoves{(check1 >> 7) & ~(m_lightPieces | m_darkPieces)};
 
-        for (int i{ 0 }; i < 64; i++) {
+        for (int i{0}; i < 64; i++) {
             if ((static_cast<std::uint64_t>(1) << i) & validMoves) {
                 m_moves.push_back(i | (static_cast<std::uint64_t>(i + 14) << 6 | (1 << 12)));
             }
@@ -179,7 +181,6 @@ private:
             generateLBCaptures(m_darkPieces & m_kingPieces);
             generateRBCaptures(m_darkPieces & m_kingPieces);
 
-
             if (m_moves.empty()) {
                 generateRTMoves(m_darkPieces);
                 generateLTMoves(m_darkPieces);
@@ -188,8 +189,7 @@ private:
                 generateRBMoves(m_darkPieces & m_kingPieces);
             }
 
-        }
-        else {
+        } else {
             generateLBCaptures(m_lightPieces);
             generateRBCaptures(m_lightPieces);
 
@@ -206,7 +206,7 @@ private:
         }
     }
 
-public:
+  public:
     Checkers() {
         // initialise board
         m_darkPieces = 0xaa55aa;
@@ -219,22 +219,22 @@ public:
 
     bool makeMove(int moveIdx) {
         // TODO: make this cleaner
-        auto idx{ static_cast<std::uint64_t>(1) };
-        auto move{ m_moves[moveIdx] };
+        auto idx{static_cast<std::uint64_t>(1)};
+        auto move{m_moves[moveIdx]};
 
-        auto f{ getFromSquare(move) };
-        auto t{ getToSquare(move) };
-        auto m{ (f + t) / 2 };
+        auto f{getFromSquare(move)};
+        auto t{getToSquare(move)};
+        auto m{(f + t) / 2};
 
-        auto frSq{ idx << f };
-        auto toSq{ idx << t };
-        auto midSq{ idx << m };
+        auto frSq{idx << f};
+        auto toSq{idx << t};
+        auto midSq{idx << m};
 
         m_drawCounter++;
 
         m_moves.clear();
 
-        bool wasKing{ static_cast<bool>(frSq & m_kingPieces) };
+        bool wasKing{static_cast<bool>(frSq & m_kingPieces)};
 
         if (isCaptureMove(move)) {
             m_drawCounter = 0;
@@ -248,7 +248,8 @@ public:
                 m_hash ^= wasKing ? m_zobrist[1][t] : m_zobrist[0][t];
                 m_hash ^= (midSq & m_kingPieces) ? m_zobrist[3][m] : m_zobrist[2][m];
 
-                // captures to last row (making it king) and not already king (as toSq is not updated yet for king)
+                // captures to last row (making it king) and not already king (as toSq is not
+                // updated yet for king)
                 if ((toSq & 0xff00000000000000) && !wasKing) {
                     m_hash ^= m_zobrist[0][t];
                     m_hash ^= m_zobrist[1][t];
@@ -261,11 +262,11 @@ public:
                     return true; // if king is made capture chain is broken
                 }
 
-                // now check if this piece can capture any further (assuming not king - handled separately)
+                // now check if this piece can capture any further (assuming not king - handled
+                // separately)
                 generateRTCaptures(toSq);
                 generateLTCaptures(toSq);
-            }
-            else {
+            } else {
                 m_lightPieces &= ~frSq;
                 m_lightPieces |= toSq;
 
@@ -275,7 +276,7 @@ public:
                 m_hash ^= wasKing ? m_zobrist[3][t] : m_zobrist[2][t];
                 m_hash ^= (midSq & m_kingPieces) ? m_zobrist[1][m] : m_zobrist[0][m];
 
-                if ((toSq & 0xff) && !wasKing) {// first row
+                if ((toSq & 0xff) && !wasKing) { // first row
                     m_hash ^= m_zobrist[2][t];
                     m_hash ^= m_zobrist[3][t];
 
@@ -299,8 +300,7 @@ public:
                 if (m_darkTurn) {
                     generateLBCaptures(toSq);
                     generateRBCaptures(toSq);
-                }
-                else {
+                } else {
                     generateRTCaptures(toSq);
                     generateLTCaptures(toSq);
                 }
@@ -312,8 +312,7 @@ public:
                 generateMoves();
                 return true;
             }
-        }
-        else {
+        } else {
             if (m_darkTurn) {
                 m_darkPieces &= ~frSq;
                 m_darkPieces |= toSq;
@@ -327,8 +326,7 @@ public:
                     m_hash ^= m_zobrist[0][t];
                     m_hash ^= m_zobrist[1][t];
                 }
-            }
-            else {
+            } else {
                 m_lightPieces &= ~frSq;
                 m_lightPieces |= toSq;
 
