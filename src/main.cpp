@@ -63,9 +63,11 @@ void displayBoard(const Checkers& board, sf::RenderWindow& window) {
 }
 
 void displayValidMoves(const Checkers& board, sf::RenderWindow& window, int selected) {
-    auto moves{board.getMoves()};
+    const int numMoves{board.getNumMoves()};
+    const auto& moves{board.getMoves()};
 
-    for (const auto& move : moves) {
+    for (int i{0}; i < numMoves; i++) {
+        const auto& move = moves[i];
         if (board.isCaptureMove(move)) { // capture
             if (selected == 63 - board.getFromSquare(move)) {
                 auto toSq{63 - board.getToSquare(move)};
@@ -97,7 +99,8 @@ std::vector<int> attemptToMakeMove(int selected, int newPos, Checkers& board, AI
         return {};
 
     auto moves{board.getMoves()};
-    for (int i = 0; i < moves.size(); ++i) {
+    int numMoves{board.getNumMoves()};
+    for (int i = 0; i < numMoves; ++i) {
         if ((selected == 63 - board.getFromSquare(moves[i])) &&
             (newPos == 63 - board.getToSquare(moves[i]))) {
             board.makeMove(i);

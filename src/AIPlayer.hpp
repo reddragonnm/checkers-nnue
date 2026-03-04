@@ -36,10 +36,9 @@ class AIPlayer {
             m_nodesHit = 0;
 
             int bestScore{-infinity};
-            const auto moves{m_board.getMoves()};
 
             std::stack<std::tuple<int, std::vector<int>>> s;
-            for (int i = moves.size() - 1; i >= 0; i--) {
+            for (int i = m_board.getNumMoves() - 1; i >= 0; i--) {
                 s.push({i, {}});
             }
 
@@ -62,7 +61,7 @@ class AIPlayer {
 
                     alpha = std::max(alpha, score);
                 } else {
-                    for (int i = m_board.getMoves().size() - 1; i >= 0; i--) {
+                    for (int i = m_board.getNumMoves() - 1; i >= 0; i--) {
                         s.push({i, curPath});
                     }
                 }
@@ -99,11 +98,11 @@ class AIPlayer {
         if (entry.key == hash)
             hashMove = entry.move;
 
-        const auto moves{board.getMoves()};
+        const int numMoves{board.getNumMoves()};
 
         if (board.isDraw())
             return 0;
-        if (moves.empty())
+        if (numMoves == 0)
             return -infinity + depth;
         if (depth == 0)
             return evaluate(board);
@@ -113,7 +112,7 @@ class AIPlayer {
         int bestMove{-1};
 
         for (int j{0}; j < 2; j++) {
-            for (int i{0}; i < moves.size(); i++) {
+            for (int i{0}; i < numMoves; i++) {
                 if (j == 0 && i != hashMove)
                     continue;
                 if (j == 1 && i == hashMove)
@@ -151,7 +150,7 @@ class AIPlayer {
             else if (bestVal >= beta)
                 entry.flag = TTLower; // at least this good, could be better but we cut early
             else
-                entry.flag = TTExact; // actual evalutation reached}
+                entry.flag = TTExact; // actual evalutation reached
         }
         return bestVal;
     }

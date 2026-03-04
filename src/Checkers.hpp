@@ -6,6 +6,8 @@
 #include <random>
 #include <cassert>
 
+constexpr int maxMovesSize{48};
+
 constexpr std::uint64_t rt{0xfefefefefefefe};
 constexpr std::uint64_t rt2{0xfcfcfcfcfcfc};
 
@@ -25,7 +27,7 @@ struct State {
     std::uint64_t light;
     std::uint64_t king;
 
-    std::vector<std::uint16_t> moves;
+    std::array<std::uint16_t, maxMovesSize> moves;
     int drawCounter;
     bool darkTurn;
     std::uint64_t hash;
@@ -38,7 +40,8 @@ class Checkers {
     std::uint64_t m_kingPieces{};
 
     // move/capture-x, from - xxxxxx (0 to 63), to - xxxxxx (0 to 63)
-    std::vector<std::uint16_t> m_moves{};
+    std::array<std::uint16_t, maxMovesSize> m_moves{};
+    int m_moveCounter{0};
 
     int m_drawCounter{0};
     bool m_darkTurn{true};
@@ -96,7 +99,7 @@ class Checkers {
             int i{__builtin_ctzll(moves)};
             moves &= moves - 1;
 
-            m_moves.push_back(i | ((i - 7) << 6));
+            m_moves[m_moveCounter++] = i | ((i - 7) << 6);
         }
     }
 
@@ -108,7 +111,7 @@ class Checkers {
             int i{__builtin_ctzll(moves)};
             moves &= moves - 1;
 
-            m_moves.push_back(i | ((i - 9) << 6));
+            m_moves[m_moveCounter++] = i | ((i - 9) << 6);
         }
     }
 
@@ -120,7 +123,7 @@ class Checkers {
             int i{__builtin_ctzll(moves)};
             moves &= moves - 1;
 
-            m_moves.push_back(i | ((i + 9) << 6));
+            m_moves[m_moveCounter++] = i | ((i + 9) << 6);
         }
     }
 
@@ -132,7 +135,7 @@ class Checkers {
             int i{__builtin_ctzll(moves)};
             moves &= moves - 1;
 
-            m_moves.push_back(i | ((i + 7) << 6));
+            m_moves[m_moveCounter++] = i | ((i + 7) << 6);
         }
     }
 
@@ -149,7 +152,7 @@ class Checkers {
             int i{__builtin_ctzll(moves)};
             moves &= moves - 1;
 
-            m_moves.push_back(i | ((i - 14) << 6) | (1 << 12));
+            m_moves[m_moveCounter++] = i | ((i - 14) << 6) | (1 << 12);
         }
     }
 
@@ -162,7 +165,7 @@ class Checkers {
             int i{__builtin_ctzll(moves)};
             moves &= moves - 1;
 
-            m_moves.push_back(i | ((i - 18) << 6) | (1 << 12));
+            m_moves[m_moveCounter++] = i | ((i - 18) << 6) | (1 << 12);
         }
     }
 
@@ -175,7 +178,7 @@ class Checkers {
             int i{__builtin_ctzll(moves)};
             moves &= moves - 1;
 
-            m_moves.push_back(i | ((i + 18) << 6) | (1 << 12));
+            m_moves[m_moveCounter++] = i | ((i + 18) << 6) | (1 << 12);
         }
     }
 
@@ -188,7 +191,7 @@ class Checkers {
             int i{__builtin_ctzll(moves)};
             moves &= moves - 1;
 
-            m_moves.push_back(i | ((i + 14) << 6) | (1 << 12));
+            m_moves[m_moveCounter++] = i | ((i + 14) << 6) | (1 << 12);
         }
     }
 
@@ -202,7 +205,7 @@ class Checkers {
             generateLBCaptures(m_darkPieces & m_kingPieces);
             generateRBCaptures(m_darkPieces & m_kingPieces);
 
-            if (m_moves.empty()) {
+            if (m_moveCounter == 0) {
                 generateRTMoves(m_darkPieces);
                 generateLTMoves(m_darkPieces);
 
@@ -217,7 +220,7 @@ class Checkers {
             generateRTCaptures(m_lightPieces & m_kingPieces);
             generateLTCaptures(m_lightPieces & m_kingPieces);
 
-            if (m_moves.empty()) {
+            if (m_moveCounter == 0) {
                 generateLBMoves(m_lightPieces);
                 generateRBMoves(m_lightPieces);
 
@@ -271,8 +274,7 @@ class Checkers {
         auto midSq{idx << m};
 
         m_drawCounter++;
-
-        m_moves.clear();
+        m_moveCounter = 0;
 
         bool wasKing{static_cast<bool>(frSq & m_kingPieces)};
 
@@ -346,7 +348,7 @@ class Checkers {
                 }
             }
 
-            if (m_moves.empty()) { // no more captures left
+            if (m_moveCounter == 0) { // no more captures left
                 m_darkTurn = !m_darkTurn;
                 m_hash ^= m_zobristSide;
                 generateMoves();
@@ -396,11 +398,11 @@ class Checkers {
         return false;
     }
 
-    std::uint64_t hash() {
+    std::uint64_t hash() const {
         return m_hash;
     }
 
-    bool isDraw() {
+    bool isDraw() const {
         return m_drawCounter == 80;
     }
 
@@ -428,8 +430,12 @@ class Checkers {
         return m_kingPieces;
     }
 
-    const std::vector<std::uint16_t>& getMoves() const {
+    const std::array<std::uint16_t, maxMovesSize>& getMoves() const {
         return m_moves;
+    }
+
+    const int getNumMoves() const {
+        return m_moveCounter;
     }
 
     const bool& isDarkTurn() const {
