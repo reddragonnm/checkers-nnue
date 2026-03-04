@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cassert>
-#include <stack>
 
 #include "Checkers.hpp"
 
@@ -13,12 +12,12 @@ struct TTEntry {
     std::uint64_t key;
     int depth;
     int score;
-    std::uint16_t move;
+    int move;
     std::uint8_t flag;
 };
 
 constexpr int ttSize{1 << 22};
-extern std::vector<TTEntry> tt(ttSize);
+std::vector<TTEntry> tt(ttSize, {0, -1, 0, -1, 0});
 
 class AIPlayer {
   private:
@@ -28,48 +27,37 @@ class AIPlayer {
   public:
     AIPlayer(Checkers& board) : m_board(board), m_nodesHit(0) {}
 
-    std::vector<int> search(int maxDepth = 10) {
-        std::vector<int> bestPath;
-        int bestRootMove{-1};
+    std::vector<int> extractPV() {
+        std::vector<int> pv;
+        int movesMade{0};
 
-        for (int d{1}; d <= maxDepth; d++) {
-            m_nodesHit = 0;
+        while (true) {
+            TTEntry& entry = tt[m_board.hash() & (ttSize - 1)];
+            if (entry.key != m_board.hash() || entry.move == -1)
+                break;
 
-            int bestScore{-infinity};
+            int move = entry.move;
+            if (move >= m_board.getNumMoves())
+                break;
 
-            std::stack<std::tuple<int, std::vector<int>>> s;
-            for (int i = m_board.getNumMoves() - 1; i >= 0; i--) {
-                s.push({i, {}});
-            }
-
-            int alpha{-infinity};
-
-            while (!s.empty()) {
-                auto [moveIdx, curPath] = s.top();
-                s.pop();
-
-                curPath.push_back(moveIdx);
-
-                if (m_board.makeMove(moveIdx)) {
-                    m_nodesHit++;
-                    int score{-negamax(-infinity, -alpha, d - 1, m_board)};
-
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestPath = curPath;
-                    }
-
-                    alpha = std::max(alpha, score);
-                } else {
-                    for (int i = m_board.getNumMoves() - 1; i >= 0; i--) {
-                        s.push({i, curPath});
-                    }
-                }
-                m_board.undoMove();
-            }
+            pv.push_back(move);
+            movesMade++;
+            if (m_board.makeMove(move)) // if turn over
+                break;
         }
 
-        return bestPath;
+        for (int i = 0; i < movesMade; i++)
+            m_board.undoMove();
+
+        return pv;
+    }
+
+    std::vector<int> search(int maxDepth = 10) {
+        for (int d = 1; d <= maxDepth; d++) {
+            m_nodesHit = 0;
+            negamax(-infinity, infinity, d, m_board);
+        }
+        return extractPV();
     }
 
     int evaluate(Checkers& board) {
@@ -123,7 +111,7 @@ class AIPlayer {
                     m_nodesHit++;
                     score = -negamax(-beta, -alpha, depth - 1, board);
                 } else {
-                    score = negamax(alpha, beta, depth, board);
+                    score = negamax(alpha, beta, depth - 1, board);
                 }
 
                 board.undoMove();

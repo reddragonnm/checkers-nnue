@@ -105,7 +105,7 @@ std::vector<int> attemptToMakeMove(int selected, int newPos, Checkers& board, AI
             (newPos == 63 - board.getToSquare(moves[i]))) {
             board.makeMove(i);
             if (!board.isDarkTurn()) {
-                auto aiMoves = ai.search();
+                auto aiMoves = ai.search(15);
                 if (aiMoves.empty())
                     std::cout << "YOU WIN!\n";
                 return aiMoves;
@@ -148,6 +148,12 @@ int main() {
                     } else {
                         selected = pos;
                     }
+                }
+            }
+
+            if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
+                if (keyPressed->code == sf::Keyboard::Key::U) {
+                    board.undoMove();
                 }
             }
         }
