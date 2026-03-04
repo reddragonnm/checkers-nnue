@@ -2,6 +2,8 @@
 
 #include <cstdint>
 #include <vector>
+#include <array>
+#include <random>
 
 constexpr std::uint64_t rt{ 0xfefefefefefefe };
 constexpr std::uint64_t rt2{ 0xfcfcfcfcfcfc };
@@ -15,6 +17,8 @@ constexpr std::uint64_t rb2{ 0xfcfcfcfcfcfc0000 };
 constexpr std::uint64_t lb{ 0x7f7f7f7f7f7f7f00 };
 constexpr std::uint64_t lb2{ 0x3f3f3f3f3f3f0000 };
 
+using ZobristTable = std::array<std::array<std::uint64_t, 64>, 4>;
+
 class Checkers {
 private:
     std::uint64_t m_darkPieces{};
@@ -27,11 +31,47 @@ private:
     int m_drawCounter{ 0 };
     bool m_darkTurn{ true };
 
-public:
-    Checkers() {
-        // initialise board
-        m_darkPieces = 0xaa55aa;
-        m_lightPieces = static_cast<std::uint64_t>(0x55aa55) << 40;
+    ZobristTable m_zobrist;
+    std::uint64_t m_zobristSide;
+
+    std::uint64_t m_hash;
+
+    void initZobrist() {
+        std::mt19937_64 rng(123456);
+
+        for (int piece = 0; piece < 4; piece++) {
+            for (int sq = 0; sq < 64; sq++) {
+                m_zobrist[piece][sq] = rng();
+            }
+        }
+
+        m_zobristSide = rng();
+    }
+
+    std::uint64_t computeHash() {
+        std::uint64_t h = 0;
+        for (int i = 0; i < 64; i++) {
+            std::uint64_t mask{ static_cast<std::uint64_t>(1) << i };
+
+            if (mask & m_darkPieces) {
+                if (mask & m_kingPieces)
+                    h ^= m_zobrist[1][i];
+                else
+                    h ^= m_zobrist[0][i];
+            }
+
+            if (mask & m_lightPieces) {
+                if (mask & m_kingPieces)
+                    h ^= m_zobrist[3][i];
+                else
+                    h ^= m_zobrist[2][i];
+            }
+        }
+
+        if (m_darkTurn)
+            h ^= m_zobristSide;
+
+        return h;
     }
 
     void generateRTMoves(std::uint64_t pieces) {
@@ -129,8 +169,7 @@ public:
     }
 
     void generateMoves() {
-        m_kingPieces |= m_darkPieces & 0xff00000000000000; // last row
-        m_kingPieces |= m_lightPieces & 0xff; // first row
+        assert(m_hash == computeHash());
 
         if (m_darkTurn) {
             generateRTCaptures(m_darkPieces);
@@ -166,6 +205,17 @@ public:
         }
     }
 
+public:
+    Checkers() {
+        // initialise board
+        m_darkPieces = 0xaa55aa;
+        m_lightPieces = static_cast<std::uint64_t>(0x55aa55) << 40;
+
+        initZobrist();
+        m_hash = computeHash();
+        generateMoves();
+    }
+
     bool makeMove(int moveIdx) {
         // TODO: make this cleaner
         auto idx{ static_cast<std::uint64_t>(1) };
@@ -173,14 +223,17 @@ public:
 
         auto f{ getFromSquare(move) };
         auto t{ getToSquare(move) };
+        auto m{ (f + t) / 2 };
 
         auto frSq{ idx << f };
         auto toSq{ idx << t };
-        auto midSq{ idx << ((f + t) / 2) };
+        auto midSq{ idx << m };
 
         m_drawCounter++;
 
         m_moves.clear();
+
+        bool wasKing{ frSq & m_kingPieces };
 
         if (isCaptureMove(move)) {
             m_drawCounter = 0;
@@ -190,9 +243,19 @@ public:
 
                 m_lightPieces &= ~midSq; // remove captured piece
 
+                m_hash ^= wasKing ? m_zobrist[1][f] : m_zobrist[0][f];
+                m_hash ^= wasKing ? m_zobrist[1][t] : m_zobrist[0][t];
+                m_hash ^= (midSq & m_kingPieces) ? m_zobrist[3][m] : m_zobrist[2][m];
+
                 // captures to last row (making it king) and not already king (as toSq is not updated yet for king)
-                if ((toSq & 0xff00000000000000) && !(frSq & m_kingPieces)) {
+                if ((toSq & 0xff00000000000000) && !wasKing) {
+                    m_hash ^= m_zobrist[0][t];
+                    m_hash ^= m_zobrist[1][t];
+
+                    m_kingPieces |= toSq;
+
                     m_darkTurn = !m_darkTurn;
+                    m_hash ^= m_zobristSide;
                     generateMoves();
                     return true; // if king is made capture chain is broken
                 }
@@ -207,8 +270,18 @@ public:
 
                 m_darkPieces &= ~midSq;
 
-                if ((toSq & 0xff) && !(frSq & m_kingPieces)) {// first row
+                m_hash ^= wasKing ? m_zobrist[3][f] : m_zobrist[2][f];
+                m_hash ^= wasKing ? m_zobrist[3][t] : m_zobrist[2][t];
+                m_hash ^= (midSq & m_kingPieces) ? m_zobrist[1][m] : m_zobrist[0][m];
+
+                if ((toSq & 0xff) && !wasKing) {// first row
+                    m_hash ^= m_zobrist[2][t];
+                    m_hash ^= m_zobrist[3][t];
+
+                    m_kingPieces |= toSq;
+
                     m_darkTurn = !m_darkTurn;
+                    m_hash ^= m_zobristSide;
                     generateMoves();
                     return true;
                 }
@@ -234,6 +307,7 @@ public:
 
             if (m_moves.empty()) { // no more captures left
                 m_darkTurn = !m_darkTurn;
+                m_hash ^= m_zobristSide;
                 generateMoves();
                 return true;
             }
@@ -243,16 +317,28 @@ public:
                 m_darkPieces &= ~frSq;
                 m_darkPieces |= toSq;
 
-                if ((toSq & 0xff00000000000000) && !(frSq & m_kingPieces)) {
+                m_hash ^= wasKing ? m_zobrist[1][f] : m_zobrist[0][f];
+                m_hash ^= wasKing ? m_zobrist[1][t] : m_zobrist[0][t];
+
+                if ((toSq & 0xff00000000000000) && !wasKing) {
                     m_drawCounter = 0;
+                    m_kingPieces |= toSq;
+                    m_hash ^= m_zobrist[0][t];
+                    m_hash ^= m_zobrist[1][t];
                 }
             }
             else {
                 m_lightPieces &= ~frSq;
                 m_lightPieces |= toSq;
 
-                if ((toSq & 0xff) && !(frSq & m_kingPieces)) {
+                m_hash ^= wasKing ? m_zobrist[3][f] : m_zobrist[2][f];
+                m_hash ^= wasKing ? m_zobrist[3][t] : m_zobrist[2][t];
+
+                if ((toSq & 0xff) && !wasKing) {
                     m_drawCounter = 0;
+                    m_kingPieces |= toSq;
+                    m_hash ^= m_zobrist[2][t];
+                    m_hash ^= m_zobrist[3][t];
                 }
             }
 
@@ -262,11 +348,17 @@ public:
             }
 
             m_darkTurn = !m_darkTurn;
+            m_hash ^= m_zobristSide;
             generateMoves();
             return true;
         }
 
+        assert(m_hash == computeHash());
         return false;
+    }
+
+    std::uint64_t hash() {
+        return m_hash;
     }
 
     bool isDraw() {

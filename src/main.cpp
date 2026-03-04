@@ -133,8 +133,6 @@ int main()
 
 
     Checkers board{};
-    board.generateMoves();
-
     AIPlayer ai{ board, false };
 
     std::vector<int> aiPendingMoves;
