@@ -7,7 +7,7 @@
 #include "AIPlayer.hpp"
 
 int main() {
-    int maxDepth{18};
+    int maxDepth{20};
 
     Checkers board{};
     AIPlayer ai{board};

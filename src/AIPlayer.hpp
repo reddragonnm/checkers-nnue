@@ -89,7 +89,7 @@ class AIPlayer {
         if (board.isDraw())
             return 0;
         if (numMoves == 0)
-            return -infinity - depth;
+            return -infinity;
         if (depth == 0)
             return quiscence(alpha, beta, board);
 
@@ -171,7 +171,7 @@ class AIPlayer {
         int alpha{-infinity};
         int beta{infinity};
 
-        if (depth >= 4 && std::abs(curScore - infinity) > 1000) {
+        if (depth >= 4 && std::abs(curScore) == infinity) {
             alpha = curScore - delta;
             beta = curScore + delta;
         }
