@@ -94,8 +94,9 @@ void displayValidMoves(const Checkers& board, sf::RenderWindow& window, int sele
     }
 }
 
-std::vector<int> attemptToMakeMove(int selected, int newPos, Checkers& board, AIPlayer& ai) {
-    if (selected == -1)
+std::vector<int> attemptToMakeMove(int selected, int newPos, Checkers& board, AIPlayer& ai,
+                                   bool& gameOver) {
+    if (selected == -1 || gameOver)
         return {};
 
     auto moves{board.getMoves()};
@@ -107,8 +108,10 @@ std::vector<int> attemptToMakeMove(int selected, int newPos, Checkers& board, AI
             if (!board.isDarkTurn()) {
                 // auto aiMoves {ai.search(15);}
                 auto aiMoves{ai.search(2, false)};
-                if (aiMoves.empty())
+                if (aiMoves.empty()) {
                     std::cout << "YOU WIN!\n";
+                    gameOver = true;
+                }
                 return aiMoves;
             } else
                 return {};
@@ -126,6 +129,8 @@ int main() {
     Checkers board{};
     AIPlayer ai{board};
 
+    bool gameOver{false};
+
     std::vector<int> aiPendingMoves;
     sf::Clock aiTimer;
     const sf::Time moveDelay{sf::milliseconds(200)};
@@ -141,7 +146,7 @@ int main() {
                     int pos{8 * (mouseButtonPressed->position.y / squareSize) +
                             (mouseButtonPressed->position.x / squareSize)};
 
-                    std::vector<int> path{attemptToMakeMove(selected, pos, board, ai)};
+                    std::vector<int> path{attemptToMakeMove(selected, pos, board, ai, gameOver)};
                     if (!path.empty()) {
                         aiPendingMoves = path;
                         aiTimer.restart();
@@ -166,6 +171,7 @@ int main() {
 
             if (board.isDarkTurn() && board.getNumMoves() == 0) {
                 std::cout << "AI WINS!\n";
+                gameOver = true;
             }
         }
 

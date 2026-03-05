@@ -31,6 +31,7 @@ struct State {
     int moveCounter;
     int drawCounter;
     bool darkTurn;
+    bool midCapture;
     std::uint64_t hash;
 };
 
@@ -46,9 +47,11 @@ class Checkers {
 
     int m_drawCounter{0};
     bool m_darkTurn{true};
+    bool m_midCapture{false};
 
     ZobristTable m_zobrist;
     std::uint64_t m_zobristSide;
+    std::uint64_t m_zobristMidCapture;
 
     std::uint64_t m_hash;
 
@@ -58,7 +61,7 @@ class Checkers {
     std::vector<State> m_history;
 
     void initZobrist() {
-        std::mt19937_64 rng(123456);
+        std::mt19937_64 rng(42);
 
         for (int piece = 0; piece < 4; piece++) {
             for (int sq = 0; sq < 64; sq++) {
@@ -67,6 +70,7 @@ class Checkers {
         }
 
         m_zobristSide = rng();
+        m_zobristMidCapture = rng();
     }
 
     std::uint64_t computeHash() {
@@ -91,6 +95,9 @@ class Checkers {
 
         if (m_darkTurn)
             h ^= m_zobristSide;
+
+        if (m_midCapture)
+            h ^= m_zobristMidCapture;
 
         return h;
     }
@@ -259,6 +266,7 @@ class Checkers {
             m_moveCounter = top.moveCounter;
             m_drawCounter = top.drawCounter;
             m_darkTurn = top.darkTurn;
+            m_midCapture = top.midCapture;
             m_hash = top.hash;
 
             m_history.pop_back();
@@ -269,7 +277,12 @@ class Checkers {
         // TODO: make this cleaner
 
         m_history.emplace_back(m_darkPieces, m_lightPieces, m_kingPieces, m_moves, m_moveCounter,
-                               m_drawCounter, m_darkTurn, m_hash);
+                               m_drawCounter, m_darkTurn, m_midCapture, m_hash);
+
+        if (m_midCapture) {
+            m_midCapture = false;
+            m_hash ^= m_zobristMidCapture;
+        }
 
         auto idx{static_cast<std::uint64_t>(1)};
         auto move{m_moves[moveIdx]};
@@ -407,6 +420,9 @@ class Checkers {
             generateMoves();
             return true;
         }
+
+        m_midCapture = true;
+        m_hash ^= m_zobristMidCapture;
 
         assert(m_hash == computeHash());
         return false;
