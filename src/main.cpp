@@ -105,7 +105,8 @@ std::vector<int> attemptToMakeMove(int selected, int newPos, Checkers& board, AI
             (newPos == 63 - board.getToSquare(moves[i]))) {
             board.makeMove(i);
             if (!board.isDarkTurn()) {
-                auto aiMoves = ai.search(15);
+                // auto aiMoves {ai.search(15);}
+                auto aiMoves{ai.search(2, false)};
                 if (aiMoves.empty())
                     std::cout << "YOU WIN!\n";
                 return aiMoves;
@@ -162,6 +163,10 @@ int main() {
             board.makeMove(aiPendingMoves.front());
             aiPendingMoves.erase(aiPendingMoves.begin());
             aiTimer.restart();
+
+            if (board.isDarkTurn() && board.getNumMoves() == 0) {
+                std::cout << "AI WINS!\n";
+            }
         }
 
         window.clear();

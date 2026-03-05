@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <chrono>
 
 #include "Checkers.hpp"
 
@@ -23,42 +24,6 @@ class AIPlayer {
   private:
     Checkers& m_board;
     int m_nodesHit;
-
-  public:
-    AIPlayer(Checkers& board) : m_board(board), m_nodesHit(0) {}
-
-    std::vector<int> extractPV() {
-        std::vector<int> pv;
-        int movesMade{0};
-
-        while (true) {
-            TTEntry& entry = tt[m_board.hash() & (ttSize - 1)];
-            if (entry.key != m_board.hash() || entry.move == -1)
-                break;
-
-            int move = entry.move;
-            if (move >= m_board.getNumMoves())
-                break;
-
-            pv.push_back(move);
-            movesMade++;
-            if (m_board.makeMove(move)) // if turn over
-                break;
-        }
-
-        for (int i = 0; i < movesMade; i++)
-            m_board.undoMove();
-
-        return pv;
-    }
-
-    std::vector<int> search(int maxDepth = 10) {
-        for (int d = 1; d <= maxDepth; d++) {
-            m_nodesHit = 0;
-            negamax(-infinity, infinity, d, m_board);
-        }
-        return extractPV();
-    }
 
     int evaluate(Checkers& board) {
         int dark{std::popcount(board.getDarkPieces()) +
@@ -127,11 +92,11 @@ class AIPlayer {
         int bestVal{-infinity};
         int bestMove{-1};
 
-        for (int j{0}; j < 2; j++) {
+        for (int pass{0}; pass < 2; pass++) { // try best move from last depth first
             for (int i{0}; i < numMoves; i++) {
-                if (j == 0 && i != hashMove)
+                if (pass == 0 && i != hashMove)
                     continue;
-                if (j == 1 && i == hashMove)
+                if (pass == 1 && i == hashMove)
                     continue;
 
                 int score;
@@ -169,6 +134,79 @@ class AIPlayer {
                 entry.flag = TTExact; // actual evalutation reached
         }
         return bestVal;
+    }
+
+    std::vector<int> extractPV() {
+        std::vector<int> pv;
+        int movesMade{0};
+
+        while (true) {
+            TTEntry& entry = tt[m_board.hash() & (ttSize - 1)];
+            if (entry.key != m_board.hash() || entry.move == -1)
+                break;
+
+            int move = entry.move;
+            if (move >= m_board.getNumMoves())
+                break;
+
+            pv.push_back(move);
+            movesMade++;
+            if (m_board.makeMove(move)) // if turn over
+                break;
+        }
+
+        for (int i = 0; i < movesMade; i++)
+            m_board.undoMove();
+
+        return pv;
+    }
+
+    void aspirationWindowSearch(int depth, int& curScore) {
+        int delta{50};
+        int alpha{-infinity};
+        int beta{-infinity};
+
+        if (depth >= 4) {
+            alpha = curScore - delta;
+            beta = curScore + delta;
+        }
+
+        while (true) {
+            m_nodesHit = 0;
+            int result{negamax(alpha, beta, depth, m_board)};
+
+            if (result <= alpha) {
+                alpha -= delta;
+                delta *= 2;
+            } else if (result >= beta) {
+                beta += delta;
+                delta *= 2;
+            } else {
+                curScore = result;
+                break;
+            }
+        }
+    }
+
+  public:
+    AIPlayer(Checkers& board) : m_board(board), m_nodesHit(0) {}
+
+    std::vector<int> search(int input = 10, bool depthInput = true) {
+        int score{0};
+
+        if (depthInput) {
+            for (int d{1}; d <= input; d++)
+                aspirationWindowSearch(d, score);
+        } else {
+            int d{1};
+            auto start{std::chrono::high_resolution_clock::now()};
+            while (std::chrono::duration_cast<std::chrono::seconds>(
+                       std::chrono::high_resolution_clock::now() - start)
+                       .count() < input)
+                aspirationWindowSearch(d++, score);
+        }
+
+        return extractPV();
     }
 
     int getNodesHit() {

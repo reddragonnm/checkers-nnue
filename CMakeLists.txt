@@ -17,6 +17,7 @@ FetchContent_MakeAvailable(SFML)
 add_executable(main src/main.cpp)
 target_compile_features(main PRIVATE cxx_std_23)
 target_link_libraries(main PRIVATE SFML::Graphics SFML::Network)
+target_compile_options(main PRIVATE -O3 -march=native)
 
 add_executable(bench src/bench.cpp)
 target_compile_features(bench PRIVATE cxx_std_23)
