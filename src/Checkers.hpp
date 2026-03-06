@@ -6,19 +6,19 @@
 #include <random>
 #include <cassert>
 
-constexpr int maxMovesSize{48};
+constexpr int maxMovesSize{ 48 };
 
-constexpr std::uint64_t rt{0xfefefefefefefe};
-constexpr std::uint64_t rt2{0xfcfcfcfcfcfc};
+constexpr std::uint64_t rt{ 0xfefefefefefefe };
+constexpr std::uint64_t rt2{ 0xfcfcfcfcfcfc };
 
-constexpr std::uint64_t lt{0x7f7f7f7f7f7f7f};
-constexpr std::uint64_t lt2{0x3f3f3f3f3f3f};
+constexpr std::uint64_t lt{ 0x7f7f7f7f7f7f7f };
+constexpr std::uint64_t lt2{ 0x3f3f3f3f3f3f };
 
-constexpr std::uint64_t rb{0xfefefefefefefe00};
-constexpr std::uint64_t rb2{0xfcfcfcfcfcfc0000};
+constexpr std::uint64_t rb{ 0xfefefefefefefe00 };
+constexpr std::uint64_t rb2{ 0xfcfcfcfcfcfc0000 };
 
-constexpr std::uint64_t lb{0x7f7f7f7f7f7f7f00};
-constexpr std::uint64_t lb2{0x3f3f3f3f3f3f0000};
+constexpr std::uint64_t lb{ 0x7f7f7f7f7f7f7f00 };
+constexpr std::uint64_t lb2{ 0x3f3f3f3f3f3f0000 };
 
 using ZobristTable = std::array<std::array<std::uint64_t, 64>, 4>;
 
@@ -36,18 +36,18 @@ struct State {
 };
 
 class Checkers {
-  private:
+private:
     std::uint64_t m_darkPieces{};
     std::uint64_t m_lightPieces{};
     std::uint64_t m_kingPieces{};
 
     // move/capture-x, from - xxxxxx (0 to 63), to - xxxxxx (0 to 63)
     std::array<std::uint16_t, maxMovesSize> m_moves{};
-    int m_moveCounter{0};
+    int m_moveCounter{ 0 };
 
-    int m_drawCounter{0};
-    bool m_darkTurn{true};
-    bool m_midCapture{false};
+    int m_drawCounter{ 0 };
+    bool m_darkTurn{ true };
+    bool m_midCapture{ false };
 
     ZobristTable m_zobrist;
     std::uint64_t m_zobristSide;
@@ -76,7 +76,7 @@ class Checkers {
     std::uint64_t computeHash() {
         std::uint64_t h = 0;
         for (int i = 0; i < 64; i++) {
-            std::uint64_t mask{static_cast<std::uint64_t>(1) << i};
+            std::uint64_t mask{ static_cast<std::uint64_t>(1) << i };
 
             if (mask & m_darkPieces) {
                 if (mask & m_kingPieces)
@@ -103,11 +103,11 @@ class Checkers {
     }
 
     void generateRTMoves(std::uint64_t pieces) {
-        std::uint64_t moves{(rt & pieces) << 7};
+        std::uint64_t moves{ (rt & pieces) << 7 };
         moves &= m_unoccupied;
 
         while (moves) {
-            int i{__builtin_ctzll(moves)};
+            int i{ __builtin_ctzll(moves) };
             moves &= moves - 1;
 
             m_moves[m_moveCounter++] = i | ((i - 7) << 6);
@@ -115,11 +115,11 @@ class Checkers {
     }
 
     void generateLTMoves(std::uint64_t pieces) {
-        std::uint64_t moves{(lt & pieces) << 9};
+        std::uint64_t moves{ (lt & pieces) << 9 };
         moves &= m_unoccupied;
 
         while (moves) {
-            int i{__builtin_ctzll(moves)};
+            int i{ __builtin_ctzll(moves) };
             moves &= moves - 1;
 
             m_moves[m_moveCounter++] = i | ((i - 9) << 6);
@@ -127,11 +127,11 @@ class Checkers {
     }
 
     void generateRBMoves(std::uint64_t pieces) {
-        std::uint64_t moves{(rb & pieces) >> 9};
+        std::uint64_t moves{ (rb & pieces) >> 9 };
         moves &= m_unoccupied;
 
         while (moves) {
-            int i{__builtin_ctzll(moves)};
+            int i{ __builtin_ctzll(moves) };
             moves &= moves - 1;
 
             m_moves[m_moveCounter++] = i | ((i + 9) << 6);
@@ -139,11 +139,11 @@ class Checkers {
     }
 
     void generateLBMoves(std::uint64_t pieces) {
-        std::uint64_t moves{(lb & pieces) >> 7};
+        std::uint64_t moves{ (lb & pieces) >> 7 };
         moves &= m_unoccupied;
 
         while (moves) {
-            int i{__builtin_ctzll(moves)};
+            int i{ __builtin_ctzll(moves) };
             moves &= moves - 1;
 
             m_moves[m_moveCounter++] = i | ((i + 7) << 6);
@@ -152,13 +152,13 @@ class Checkers {
 
     void generateRTCaptures(std::uint64_t pieces) {
         // TODO: check double rt instead of rt2 speed/space
-        std::uint64_t check1{((rt2 & pieces) << 7) &
-                             m_oppPieces}; // check opp piece is present after one diagonal
-        std::uint64_t moves{(check1 << 7) &
-                            m_unoccupied}; // then valid only after empty at 2 diagonal
+        std::uint64_t check1{ ((rt2 & pieces) << 7) &
+                             m_oppPieces }; // check opp piece is present after one diagonal
+        std::uint64_t moves{ (check1 << 7) &
+                            m_unoccupied }; // then valid only after empty at 2 diagonal
 
         while (moves) {
-            int i{__builtin_ctzll(moves)};
+            int i{ __builtin_ctzll(moves) };
             moves &= moves - 1;
 
             m_moves[m_moveCounter++] = i | ((i - 14) << 6) | (1 << 12);
@@ -166,11 +166,11 @@ class Checkers {
     }
 
     void generateLTCaptures(std::uint64_t pieces) {
-        std::uint64_t check1{((lt2 & pieces) << 9) & m_oppPieces};
-        std::uint64_t moves{(check1 << 9) & m_unoccupied};
+        std::uint64_t check1{ ((lt2 & pieces) << 9) & m_oppPieces };
+        std::uint64_t moves{ (check1 << 9) & m_unoccupied };
 
         while (moves) {
-            int i{__builtin_ctzll(moves)};
+            int i{ __builtin_ctzll(moves) };
             moves &= moves - 1;
 
             m_moves[m_moveCounter++] = i | ((i - 18) << 6) | (1 << 12);
@@ -178,11 +178,11 @@ class Checkers {
     }
 
     void generateRBCaptures(std::uint64_t pieces) {
-        std::uint64_t check1{((rb2 & pieces) >> 9) & m_oppPieces};
-        std::uint64_t moves{(check1 >> 9) & m_unoccupied};
+        std::uint64_t check1{ ((rb2 & pieces) >> 9) & m_oppPieces };
+        std::uint64_t moves{ (check1 >> 9) & m_unoccupied };
 
         while (moves) {
-            int i{__builtin_ctzll(moves)};
+            int i{ __builtin_ctzll(moves) };
             moves &= moves - 1;
 
             m_moves[m_moveCounter++] = i | ((i + 18) << 6) | (1 << 12);
@@ -190,11 +190,11 @@ class Checkers {
     }
 
     void generateLBCaptures(std::uint64_t pieces) {
-        std::uint64_t check1{((lb2 & pieces) >> 7) & m_oppPieces};
-        std::uint64_t moves{(check1 >> 7) & m_unoccupied};
+        std::uint64_t check1{ ((lb2 & pieces) >> 7) & m_oppPieces };
+        std::uint64_t moves{ (check1 >> 7) & m_unoccupied };
 
         while (moves) {
-            int i{__builtin_ctzll(moves)};
+            int i{ __builtin_ctzll(moves) };
             moves &= moves - 1;
 
             m_moves[m_moveCounter++] = i | ((i + 14) << 6) | (1 << 12);
@@ -225,7 +225,8 @@ class Checkers {
                 generateRBMoves(m_darkPieces & m_kingPieces);
             }
 
-        } else {
+        }
+        else {
             generateLBCaptures(m_lightPieces);
             generateRBCaptures(m_lightPieces);
 
@@ -242,7 +243,7 @@ class Checkers {
         }
     }
 
-  public:
+public:
     Checkers() {
         // initialise board
         m_darkPieces = 0xaa55aa;
@@ -255,20 +256,21 @@ class Checkers {
         m_history.reserve(256);
     }
 
+    void setState(const State& state) {
+        m_darkPieces = state.dark;
+        m_lightPieces = state.light;
+        m_kingPieces = state.king;
+        m_moves = state.moves;
+        m_moveCounter = state.moveCounter;
+        m_drawCounter = state.drawCounter;
+        m_darkTurn = state.darkTurn;
+        m_midCapture = state.midCapture;
+        m_hash = state.hash;
+    }
+
     void undoMove() {
         if (!m_history.empty()) {
-            const State& top{m_history.back()};
-
-            m_darkPieces = top.dark;
-            m_lightPieces = top.light;
-            m_kingPieces = top.king;
-            m_moves = top.moves;
-            m_moveCounter = top.moveCounter;
-            m_drawCounter = top.drawCounter;
-            m_darkTurn = top.darkTurn;
-            m_midCapture = top.midCapture;
-            m_hash = top.hash;
-
+            setState(m_history.back());
             m_history.pop_back();
         }
     }
@@ -277,28 +279,28 @@ class Checkers {
         // TODO: make this cleaner
 
         m_history.emplace_back(m_darkPieces, m_lightPieces, m_kingPieces, m_moves, m_moveCounter,
-                               m_drawCounter, m_darkTurn, m_midCapture, m_hash);
+            m_drawCounter, m_darkTurn, m_midCapture, m_hash);
 
         if (m_midCapture) {
             m_midCapture = false;
             m_hash ^= m_zobristMidCapture;
         }
 
-        auto idx{static_cast<std::uint64_t>(1)};
-        auto move{m_moves[moveIdx]};
+        auto idx{ static_cast<std::uint64_t>(1) };
+        auto move{ m_moves[moveIdx] };
 
-        auto f{getFromSquare(move)};
-        auto t{getToSquare(move)};
-        auto m{(f + t) / 2};
+        auto f{ getFromSquare(move) };
+        auto t{ getToSquare(move) };
+        auto m{ (f + t) / 2 };
 
-        auto frSq{idx << f};
-        auto toSq{idx << t};
-        auto midSq{idx << m};
+        auto frSq{ idx << f };
+        auto toSq{ idx << t };
+        auto midSq{ idx << m };
 
         m_drawCounter++;
         m_moveCounter = 0;
 
-        bool wasKing{static_cast<bool>(frSq & m_kingPieces)};
+        bool wasKing{ static_cast<bool>(frSq & m_kingPieces) };
 
         if (isCaptureMove(move)) {
             m_drawCounter = 0;
@@ -332,7 +334,8 @@ class Checkers {
                 regenCache();
                 generateRTCaptures(toSq);
                 generateLTCaptures(toSq);
-            } else {
+            }
+            else {
                 m_lightPieces &= ~frSq;
                 m_lightPieces |= toSq;
 
@@ -369,7 +372,8 @@ class Checkers {
                 if (m_darkTurn) {
                     generateLBCaptures(toSq);
                     generateRBCaptures(toSq);
-                } else {
+                }
+                else {
                     generateRTCaptures(toSq);
                     generateLTCaptures(toSq);
                 }
@@ -381,7 +385,8 @@ class Checkers {
                 generateMoves();
                 return true;
             }
-        } else {
+        }
+        else {
             if (m_darkTurn) {
                 m_darkPieces &= ~frSq;
                 m_darkPieces |= toSq;
@@ -395,7 +400,8 @@ class Checkers {
                     m_hash ^= m_zobrist[0][t];
                     m_hash ^= m_zobrist[1][t];
                 }
-            } else {
+            }
+            else {
                 m_lightPieces &= ~frSq;
                 m_lightPieces |= toSq;
 
@@ -433,7 +439,7 @@ class Checkers {
     }
 
     bool isDraw() const {
-        return m_drawCounter == 80;
+        return m_drawCounter == 80 || (m_lightPieces == 0 && m_darkPieces == 0);
     }
 
     bool isCaptureMove(std::uint16_t move) const {

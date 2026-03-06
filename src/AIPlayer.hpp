@@ -3,10 +3,11 @@
 #include <cassert>
 #include <chrono>
 #include <iostream>
+#include <map>
 
 #include "Checkers.hpp"
 
-constexpr int infinity{10000};
+constexpr int infinity{ 10000 };
 
 enum { TTExact, TTUpper, TTLower };
 
@@ -18,40 +19,41 @@ struct TTEntry {
     std::uint8_t flag;
 };
 
-constexpr int ttSize{1 << 24};
-std::vector<TTEntry> tt(ttSize, {0, -1, 0, -1, 0});
+constexpr int ttSize{ 1 << 24 };
+std::vector<TTEntry> tt(ttSize, { 0, -1, 0, -1, 0 });
 
 class AIPlayer {
-  private:
+private:
     Checkers& m_board;
-    int m_nodesHit{0};
-    int m_hashCollisions{0};
+    int m_nodesHit{ 0 };
+    int m_hashCollisions{ 0 };
 
     int evaluate(Checkers& board) {
-        int dark{std::popcount(board.getDarkPieces()) +
-                 std::popcount(board.getDarkPieces() & board.getKingPieces())};
-        int light{std::popcount(board.getLightPieces()) +
-                  std::popcount(board.getLightPieces() & board.getKingPieces())};
+        int dark{ std::popcount(board.getDarkPieces()) +
+                 std::popcount(board.getDarkPieces() & board.getKingPieces()) };
+        int light{ std::popcount(board.getLightPieces()) +
+                  std::popcount(board.getLightPieces() & board.getKingPieces()) };
 
         return board.isDarkTurn() ? (dark - light) : (light - dark);
     }
 
     int quiscence(int alpha, int beta, Checkers& board) {
-        int eval{evaluate(board)};
+        int eval{ evaluate(board) };
 
         if (eval >= beta)
             return beta;
         alpha = std::max(alpha, eval);
 
-        const int numMoves{board.getNumMoves()};
+        const int numMoves{ board.getNumMoves() };
         if (numMoves == 0 || !board.isCaptureMove(board.getMoves()[0]))
             return eval;
 
-        for (int i{0}; i < numMoves; i++) {
+        for (int i{ 0 }; i < numMoves; i++) {
             int score;
             if (board.makeMove(i)) {
                 score = -quiscence(-beta, -alpha, board);
-            } else {
+            }
+            else {
                 score = quiscence(alpha, beta, board);
             }
             board.undoMove();
@@ -65,8 +67,8 @@ class AIPlayer {
     }
 
     int negamax(int alpha, int beta, int depth, Checkers& board) {
-        std::uint64_t hash{board.hash()};
-        TTEntry& entry{tt[hash & (ttSize - 1)]};
+        std::uint64_t hash{ board.hash() };
+        TTEntry& entry{ tt[hash & (ttSize - 1)] };
 
         if (entry.key != 0 && entry.key != hash)
             m_hashCollisions++;
@@ -80,11 +82,11 @@ class AIPlayer {
                 return entry.score;
         }
 
-        int hashMove{-1};
+        int hashMove{ -1 };
         if (entry.key == hash)
             hashMove = entry.move;
 
-        const int numMoves{board.getNumMoves()};
+        const int numMoves{ board.getNumMoves() };
 
         if (board.isDraw())
             return 0;
@@ -93,12 +95,12 @@ class AIPlayer {
         if (depth == 0)
             return quiscence(alpha, beta, board);
 
-        int alphaOrg{alpha};
-        int bestVal{-infinity};
-        int bestMove{-1};
+        int alphaOrg{ alpha };
+        int bestVal{ -infinity };
+        int bestMove{ -1 };
 
-        for (int pass{0}; pass < 2; pass++) { // try best move from last depth first
-            for (int i{0}; i < numMoves; i++) {
+        for (int pass{ 0 }; pass < 2; pass++) { // try best move from last depth first
+            for (int i{ 0 }; i < numMoves; i++) {
                 if (pass == 0 && i != hashMove)
                     continue;
                 if (pass == 1 && i == hashMove)
@@ -108,7 +110,8 @@ class AIPlayer {
                 if (board.makeMove(i)) { // turn switched
                     m_nodesHit++;
                     score = -negamax(-beta, -alpha, depth - 1, board);
-                } else {
+                }
+                else {
                     score = negamax(alpha, beta, depth, board);
                 }
 
@@ -143,7 +146,7 @@ class AIPlayer {
 
     std::vector<int> extractPV() {
         std::vector<int> pv;
-        int movesMade{0};
+        int movesMade{ 0 };
 
         while (true) {
             TTEntry& entry = tt[m_board.hash() & (ttSize - 1)];
@@ -167,11 +170,11 @@ class AIPlayer {
     }
 
     void aspirationWindowSearch(int depth, int& curScore) {
-        int delta{50};
-        int alpha{-infinity};
-        int beta{infinity};
+        int delta{ 50 };
+        int alpha{ -infinity };
+        int beta{ infinity };
 
-        if (depth >= 4 && std::abs(curScore) == infinity) {
+        if (depth >= 4 && std::abs(curScore) != infinity) {
             alpha = curScore - delta;
             beta = curScore + delta;
         }
@@ -180,40 +183,43 @@ class AIPlayer {
             m_nodesHit = 0;
             m_hashCollisions = 0;
 
-            int result{negamax(alpha, beta, depth, m_board)};
+            int result{ negamax(alpha, beta, depth, m_board) };
 
             if (result <= alpha) {
                 alpha -= delta;
                 delta *= 2;
-            } else if (result >= beta) {
+            }
+            else if (result >= beta) {
                 beta += delta;
                 delta *= 2;
-            } else {
+            }
+            else {
                 curScore = result;
                 break;
             }
         }
     }
 
-  public:
+public:
     AIPlayer(Checkers& board) : m_board(board), m_nodesHit(0) {}
 
     std::vector<int> search(int input = 10, bool depthInput = true) {
-        int score{0};
-        int d{1};
+        int score{ 0 };
+        int d{ 1 };
 
         if (depthInput) {
             for (; d <= input; d++)
                 aspirationWindowSearch(d, score);
-        } else {
-            auto start{std::chrono::high_resolution_clock::now()};
+        }
+        else {
+            auto start{ std::chrono::high_resolution_clock::now() };
             while (std::chrono::duration_cast<std::chrono::seconds>(
-                       std::chrono::high_resolution_clock::now() - start)
-                       .count() < input)
+                std::chrono::high_resolution_clock::now() - start)
+                .count() < input)
                 aspirationWindowSearch(d++, score);
         }
 
-        std::cout << "Evaluation: " << score << ' ' << "Depth: " << d << '\n';
+        std::cout << "Evaluation: " << score << ' ' << "Depth: " << d - 1 << '\n';
 
         return extractPV();
     }
