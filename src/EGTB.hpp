@@ -1,12 +1,15 @@
-#pragma once
+#pragma once 
+
+#include <string>
 
 #include "Checkers.hpp"
 
 class EGTB {
-private:
-
-public:
     EGTB() {
 
     }
+
+    void buildOrLoad(const std::string& dir) {}
+
+    void probe(const Checkers& board) const {}
 };

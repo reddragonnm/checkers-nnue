@@ -5,12 +5,16 @@
 
 #include "Checkers.hpp"
 #include "AIPlayer.hpp"
+#include "EGTB.hpp"
 
 int main() {
     int maxDepth{ 20 };
 
+    EGTB egtb;
+    egtb.buildOrLoad("egtb");
+
     Checkers board{};
-    AIPlayer ai{ board };
+    AIPlayer ai{ board, egtb };
 
     std::cout << std::left << std::setw(8) << "Depth" << std::setw(15) << "Nodes" << std::setw(15)
         << "Time(ms)" << std::setw(15) << "NPS" << std::setw(15) << "Collisions"

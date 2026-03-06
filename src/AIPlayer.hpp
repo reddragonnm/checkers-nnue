@@ -6,6 +6,7 @@
 #include <map>
 
 #include "Checkers.hpp"
+#include "EGTB.hpp"
 
 constexpr int infinity{ 10000 };
 
@@ -25,6 +26,8 @@ std::vector<TTEntry> tt(ttSize, { 0, -1, 0, -1, 0 });
 class AIPlayer {
 private:
     Checkers& m_board;
+    EGTB& m_egtb;
+
     int m_nodesHit{ 0 };
     int m_hashCollisions{ 0 };
 
@@ -188,10 +191,12 @@ private:
             if (result <= alpha) {
                 alpha -= delta;
                 delta *= 2;
+                if (alpha <= -infinity) alpha = -infinity;
             }
-            else if (result >= beta) {
+            else if (result > beta) {
                 beta += delta;
                 delta *= 2;
+                if (beta >= infinity) beta = infinity;
             }
             else {
                 curScore = result;
@@ -201,9 +206,9 @@ private:
     }
 
 public:
-    AIPlayer(Checkers& board) : m_board(board), m_nodesHit(0) {}
+    AIPlayer(Checkers& board, EGTB& egtb) : m_board(board), m_egtb(egtb), m_nodesHit(0) {}
 
-    std::vector<int> search(int input = 10, bool depthInput = true) {
+    std::vector<int> search(int input = 10, bool depthInput = true, bool printInfo = false) {
         int score{ 0 };
         int d{ 1 };
 
@@ -213,13 +218,13 @@ public:
         }
         else {
             auto start{ std::chrono::high_resolution_clock::now() };
-            while (std::chrono::duration_cast<std::chrono::seconds>(
+            while (std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::high_resolution_clock::now() - start)
                 .count() < input)
                 aspirationWindowSearch(d++, score);
         }
 
-        std::cout << "Evaluation: " << score << ' ' << "Depth: " << d - 1 << '\n';
+        if (printInfo) std::cout << "Evaluation: " << score << ' ' << "Depth: " << d - 1 << '\n';
 
         return extractPV();
     }
