@@ -130,7 +130,7 @@ int main() {
     sf::RenderWindow window(sf::VideoMode({ windowSize, windowSize }), "SFML");
 
     EGTB egtb;
-    egtb.buildOrLoad("egtb");
+    egtb.buildOrLoad("egtb.bin");
 
     Checkers board{};
     AIPlayer ai{ board, egtb };

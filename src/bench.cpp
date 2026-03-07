@@ -11,7 +11,7 @@ int main() {
     int maxDepth{ 20 };
 
     EGTB egtb;
-    egtb.buildOrLoad("egtb");
+    egtb.buildOrLoad("egtb.bin");
 
     Checkers board{};
     AIPlayer ai{ board, egtb };

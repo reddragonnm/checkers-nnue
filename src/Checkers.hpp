@@ -256,6 +256,17 @@ public:
         m_history.reserve(256);
     }
 
+    Checkers(std::uint64_t dark, std::uint64_t light, std::uint64_t king, bool darkTurn) : m_darkPieces(dark),
+        m_lightPieces(light),
+        m_kingPieces(king),
+        m_darkTurn(darkTurn) {
+        initZobrist();
+        m_hash = computeHash();
+        generateMoves();
+
+        m_history.reserve(256);
+    }
+
     void setState(const State& state) {
         m_darkPieces = state.dark;
         m_lightPieces = state.light;
