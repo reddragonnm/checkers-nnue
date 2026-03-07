@@ -17,7 +17,7 @@ enum WDL : uint8_t { UNKNOWN = 0, DRAW = 1, WIN = 2, LOSS = 3 };
 class EGTB {
 private:
     std::array<std::array<std::vector<std::uint8_t>, 6>, 6> m_tables;
-    std::array<std::array<int, 33>, 33> C;
+    std::array<std::array<int, 33>, 33> C{}; // zero initialised
 
     int getKingManIndex(const std::uint64_t& darkPieces, const std::uint64_t& lightPieces, const std::uint64_t& kingPieces) const {
         // get king man value for pieces present and then king present or not
@@ -120,16 +120,30 @@ private:
     }
 
     void setTableIndex(int a, int b, int index, WDL value) {
+        if (a < 0 || a > 5 || b < 0 || b > 5 || index < 0) { // safety checks because errors
+            return;
+        }
+
         int pos{ index / 4 };
         int offset{ (index % 4) * 2 };
+        if (pos < 0 || pos >= static_cast<int>(m_tables[a][b].size())) {
+            return;
+        }
 
         m_tables[a][b][pos] &= ~(0b11 << offset);
         m_tables[a][b][pos] |= (static_cast<std::uint8_t>(value) << offset);
     }
 
     WDL getTableVal(int a, int b, int index) const {
+        if (a < 0 || a > 5 || b < 0 || b > 5 || index < 0) { // safety checks because errors
+            return UNKNOWN;
+        }
+
         int pos{ index / 4 };
         int offset{ (index % 4) * 2 };
+        if (pos < 0 || pos >= static_cast<int>(m_tables[a][b].size())) {
+            return UNKNOWN;
+        }
 
         return static_cast<WDL>((m_tables[a][b][pos] >> offset) & 0b11);
     }
@@ -143,18 +157,25 @@ private:
     }
 
     std::uint32_t decodeCombinadic(int k, int rank) const {
-        // decode combinadic index to bitmask of squares
-        std::uint32_t mask{};
-        int n{ 31 };
-        auto idx{ static_cast<std::uint32_t>(1) };
-        while (k > 0) {
-            while (n >= k && C[n][k] > rank) {
-                n--;
+        // made it safer ig, idk
+        std::uint32_t mask{ 0 };
+        int n{ 32 };
+
+        for (int r{ k }; r >= 1; --r) {
+            int x{ n - 1 };
+            while (x >= r && C[x][r] > rank) {
+                --x;
             }
-            mask |= (idx << n);
-            rank -= C[n][k];
-            k--;
+
+            if (x < r - 1) {
+                return 0;
+            }
+
+            mask |= (std::uint32_t{ 1 } << x);
+            rank -= C[x][r];
+            n = x;
         }
+
         return mask;
     }
 
@@ -220,9 +241,18 @@ private:
             }
 
             if (board.makeMove(moveIdx)) { // turn over
-                int captures{ depth + 1 };
-                int idx{ getIndexLTM(b - captures, a, board) };
-                WDL result{ getTableVal(b - captures, a, idx) }; // this is from light perspective
+                // no clever stuff (this probably broke previously)
+                int childA{ std::popcount(board.getLightPieces()) };
+                int childB{ std::popcount(board.getDarkPieces()) };
+
+                if (childA < 0 || childA > 5 || childB < 0 || childB > 5 || m_tables[childA][childB].empty()) {
+                    allWin = false;
+                    board.undoMove();
+                    continue;
+                }
+
+                int idx{ getIndexLTM(childA, childB, board) };
+                WDL result{ getTableVal(childA, childB, idx) };
 
                 if (result == LOSS) { // found forcing line
                     setTableIndex(a, b, i, WIN);
