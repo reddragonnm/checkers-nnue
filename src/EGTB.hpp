@@ -213,8 +213,6 @@ private:
     }
 
     bool evaluateBoard(int i, int a, int b, Checkers& board) {
-        // check if position is terminal and return WDL value
-
         auto moves{ board.getMoves() };
         auto numMoves{ board.getNumMoves() };
 
@@ -223,12 +221,11 @@ private:
             return true;
         }
 
-        std::stack<std::pair<int, int>> s; // depth, move index
-        for (int m{ numMoves - 1 }; m >= 0; m--) {
+        std::stack<std::pair<int, int>> s;
+        for (int m{ numMoves - 1 }; m >= 0; m--)
             s.push({ 0, m });
-        }
 
-        bool allWin{ true }; // for light
+        bool allWin{ true };
         int curDepth{ 0 };
 
         while (!s.empty()) {
@@ -240,25 +237,31 @@ private:
                 curDepth--;
             }
 
-            if (board.makeMove(moveIdx)) { // turn over
-                // no clever stuff (this probably broke previously)
-                int childA{ std::popcount(board.getLightPieces()) };
-                int childB{ std::popcount(board.getDarkPieces()) };
+            if (board.makeMove(moveIdx)) { // turn switched
+                int childA{ std::popcount(board.getDarkPieces()) };
+                int childB{ std::popcount(board.getLightPieces()) };
 
-                if (childA < 0 || childA > 5 || childB < 0 || childB > 5 || m_tables[childA][childB].empty()) {
+                // no light pieces left
+                if (childB == 0) {
+                    setTableIndex(a, b, i, WIN);
+                    return true;
+                }
+
+                if (childA < 0 || childA > 5 || childB < 0 || childB > 5
+                    || m_tables[childB][childA].empty()) {
                     allWin = false;
                     board.undoMove();
                     continue;
                 }
 
-                int idx{ getIndexLTM(childA, childB, board) };
-                WDL result{ getTableVal(childA, childB, idx) };
+                int idx{ getIndexLTM(childB, childA, board) };
+                WDL result{ getTableVal(childB, childA, idx) };
 
-                if (result == LOSS) { // found forcing line
+                if (result == LOSS) {
                     setTableIndex(a, b, i, WIN);
-                    return true; // undos unresolved because doesn't matter
+                    return true;
                 }
-                else if (result == UNKNOWN) {
+                else if (result != WIN) {
                     allWin = false;
                 }
 
@@ -266,9 +269,8 @@ private:
             }
             else {
                 curDepth++;
-                for (int m{ board.getNumMoves() - 1 }; m >= 0; m--) {
+                for (int m{ board.getNumMoves() - 1 }; m >= 0; m--)
                     s.push({ depth + 1, m });
-                }
             }
         }
 
@@ -356,7 +358,8 @@ public:
 
             build(1, 0); build(0, 1);
             build(1, 1);
-            build(2, 0); build(0, 2); build(2, 1); build(1, 2); build(2, 2);
+            build(2, 0); build(0, 2); build(2, 1); build(1, 2);
+            build(2, 2);
             build(3, 0); build(0, 3); build(3, 1); build(1, 3); build(3, 2); build(2, 3);
             build(4, 0); build(0, 4); build(4, 1); build(1, 4);
             build(5, 0); build(0, 5);
@@ -383,6 +386,9 @@ public:
     WDL probe(const Checkers& board) const {
         int a{ std::popcount(board.getDarkPieces()) };
         int b{ std::popcount(board.getLightPieces()) };
+
+        if (b == 0) return WIN;   // dark won, no light pieces
+        if (a == 0) return LOSS;  // dark lost, no dark pieces
 
         if (a + b > 5)
             return UNKNOWN;
