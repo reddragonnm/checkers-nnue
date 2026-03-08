@@ -182,10 +182,10 @@ private:
         int alpha{ -infinity };
         int beta{ infinity };
 
-        if (depth >= 4 && std::abs(curScore) != infinity) {
-            alpha = curScore - delta;
-            beta = curScore + delta;
-        }
+        // if (depth >= 4 && std::abs(curScore) != infinity) {
+        //     alpha = curScore - delta;
+        //     beta = curScore + delta;
+        // }
 
         while (true) {
             m_nodesHit = 0;

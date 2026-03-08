@@ -23,7 +23,7 @@ int main() {
     for (int i{ 0 }; i < 20; i++) {
         int numMoves{ 0 };
         while (true) {
-            auto aiMoves{ ai.search(20, false) };
+            auto aiMoves{ ai.search(11, true, true) };
             if (aiMoves.empty()) {
                 score2++;
                 break;
@@ -31,7 +31,7 @@ int main() {
             for (int move : aiMoves)
                 board.makeMove(move);
 
-            auto ai2Moves{ ai2.search(20, false) };
+            auto ai2Moves{ ai2.search(11, true, true) };
             if (ai2Moves.empty()) {
                 score1++;
                 break;
@@ -39,7 +39,7 @@ int main() {
             for (int move : ai2Moves)
                 board.makeMove(move);
 
-            if (egtb.probe(board) == DRAW || board.isDraw()) {
+            if (board.isDraw()) {
                 draws++;
                 break;
             }

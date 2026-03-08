@@ -466,7 +466,7 @@ public:
     }
 
     bool isDraw() const {
-        return m_drawCounter == 80 || (m_lightPieces == 0 && m_darkPieces == 0);
+        return m_drawCounter >= 80 || (m_lightPieces == 0 && m_darkPieces == 0);
     }
 
     bool isCaptureMove(std::uint16_t move) const {
