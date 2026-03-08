@@ -23,7 +23,7 @@ int main() {
     for (int i{ 0 }; i < 20; i++) {
         int numMoves{ 0 };
         while (true) {
-            auto aiMoves{ ai.search() };
+            auto aiMoves{ ai.search(20, false) };
             if (aiMoves.empty()) {
                 score2++;
                 break;
@@ -31,7 +31,7 @@ int main() {
             for (int move : aiMoves)
                 board.makeMove(move);
 
-            auto ai2Moves{ ai2.search() };
+            auto ai2Moves{ ai2.search(20, false) };
             if (ai2Moves.empty()) {
                 score1++;
                 break;
@@ -43,10 +43,12 @@ int main() {
                 draws++;
                 break;
             }
-
-            std::cout << "Game " << i + 1 << " Moves: " << ++numMoves << ' ' << board.getNumMoves() << '\n';
+            std::cout << "Moves: " << ++numMoves << '\n';
         }
 
+        board.reset();
+        ai.resetTT();
+        ai2.resetTT();
         std::cout << "Score: " << score1 << " - " << score2 << " Draws: " << draws << '\n';
     }
 

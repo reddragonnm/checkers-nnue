@@ -21,12 +21,13 @@ struct TTEntry {
 };
 
 constexpr int ttSize{ 1 << 24 };
-std::vector<TTEntry> tt(ttSize, { 0, -1, 0, -1, 0 });
 
 class AIPlayer {
 private:
     Checkers& m_board;
     EGTB& m_egtb;
+
+    std::vector<TTEntry> tt;
 
     int m_nodesHit{ 0 };
     int m_hashCollisions{ 0 };
@@ -196,12 +197,12 @@ private:
             if (result <= alpha) {
                 alpha -= delta;
                 delta *= 2;
-                if (alpha <= -infinity) alpha = -infinity;
+                // if (alpha <= -infinity) alpha = -infinity;
             }
             else if (result > beta) {
                 beta += delta;
                 delta *= 2;
-                if (beta >= infinity) beta = infinity;
+                // if (beta >= infinity) beta = infinity;
             }
             else {
                 curScore = result;
@@ -211,7 +212,7 @@ private:
     }
 
 public:
-    AIPlayer(Checkers& board, EGTB& egtb) : m_board(board), m_egtb(egtb), m_nodesHit(0) {}
+    AIPlayer(Checkers& board, EGTB& egtb) : m_board(board), m_egtb(egtb), m_nodesHit(0), tt(ttSize, { 0, -1, 0, -1, 0 }) {}
 
     std::vector<int> search(int input = 10, bool depthInput = true, bool printInfo = false) {
         int score{ 0 };
@@ -244,5 +245,9 @@ public:
 
     int getEgtbHits() {
         return m_egtbHits;
+    }
+
+    void resetTT() {
+        std::fill(tt.begin(), tt.end(), TTEntry{ 0, -1, 0, -1, 0 });
     }
 };

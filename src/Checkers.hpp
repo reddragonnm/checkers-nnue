@@ -267,6 +267,22 @@ public:
         m_history.reserve(256);
     }
 
+    void reset() {
+        m_darkPieces = 0xaa55aa;
+        m_lightPieces = static_cast<std::uint64_t>(0x55aa55) << 40;
+        m_kingPieces = 0;
+        m_moveCounter = 0;
+        m_drawCounter = 0;
+        m_darkTurn = true;
+        m_midCapture = false;
+
+        m_hash = computeHash();
+        generateMoves();
+
+        m_history.clear();
+        m_history.reserve(256);
+    }
+
     void setState(const State& state) {
         m_darkPieces = state.dark;
         m_lightPieces = state.light;
