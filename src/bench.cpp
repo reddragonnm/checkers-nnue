@@ -15,22 +15,56 @@ int main() {
 
     Checkers board{};
     AIPlayer ai{ board, egtb };
+    AIPlayer ai2{ board, egtb };
 
-    std::cout << std::left << std::setw(8) << "Depth" << std::setw(15) << "Nodes" << std::setw(15)
-        << "Time(ms)" << std::setw(15) << "NPS" << std::setw(15) << "Collisions"
-        << "\n";
-    std::cout << "------------------------------------------------------------\n";
+    int score1{ 0 };
+    int score2{ 0 };
+    int draws{ 0 };
+    for (int i{ 0 }; i < 20; i++) {
+        int numMoves{ 0 };
+        while (true) {
+            auto aiMoves{ ai.search() };
+            if (aiMoves.empty()) {
+                score2++;
+                break;
+            }
+            for (int move : aiMoves)
+                board.makeMove(move);
 
-    for (int depth{ 1 }; depth <= maxDepth; depth++) {
-        std::memset(tt.data(), 0, tt.size() * sizeof(TTEntry));
-        auto start{ std::chrono::high_resolution_clock::now() };
-        ai.search(depth);
-        auto end{ std::chrono::high_resolution_clock::now() };
-        double time{ std::chrono::duration<double, std::milli>(end - start).count() };
-        int nodes{ ai.getNodesHit() };
-        double nps{ nodes / (time / 1000.0) };
-        std::cout << std::left << std::setw(8) << depth << std::setw(15) << nodes << std::setw(15)
-            << time << std::setw(15) << static_cast<uint64_t>(nps) << std::setw(15)
-            << ai.getHashCollisions() << "\n";
+            auto ai2Moves{ ai2.search() };
+            if (ai2Moves.empty()) {
+                score1++;
+                break;
+            }
+            for (int move : ai2Moves)
+                board.makeMove(move);
+
+            if (egtb.probe(board) == DRAW || board.isDraw()) {
+                draws++;
+                break;
+            }
+
+            std::cout << "Game " << i + 1 << " Moves: " << ++numMoves << ' ' << board.getNumMoves() << '\n';
+        }
+
+        std::cout << "Score: " << score1 << " - " << score2 << " Draws: " << draws << '\n';
     }
+
+    // std::cout << std::left << std::setw(8) << "Depth" << std::setw(15) << "Nodes" << std::setw(15)
+    //     << "Time(ms)" << std::setw(15) << "NPS" << std::setw(15) << "Collisions" << std::setw(15) << "EGTB Hits"
+    //     << "\n";
+    // std::cout << "------------------------------------------------------------\n";
+
+    // for (int depth{ 1 }; depth <= maxDepth; depth++) {
+    //     std::memset(tt.data(), 0, tt.size() * sizeof(TTEntry));
+    //     auto start{ std::chrono::high_resolution_clock::now() };
+    //     ai.search(depth);
+    //     auto end{ std::chrono::high_resolution_clock::now() };
+    //     double time{ std::chrono::duration<double, std::milli>(end - start).count() };
+    //     int nodes{ ai.getNodesHit() };
+    //     double nps{ nodes / (time / 1000.0) };
+    //     std::cout << std::left << std::setw(8) << depth << std::setw(15) << nodes << std::setw(15)
+    //         << time << std::setw(15) << static_cast<uint64_t>(nps) << std::setw(15)
+    //         << ai.getHashCollisions() << std::setw(15) << ai.getEgtbHits() << "\n";
+    // }
 }

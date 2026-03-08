@@ -30,6 +30,7 @@ private:
 
     int m_nodesHit{ 0 };
     int m_hashCollisions{ 0 };
+    int m_egtbHits{ 0 };
 
     int evaluate(Checkers& board) {
         int dark{ std::popcount(board.getDarkPieces()) +
@@ -41,7 +42,10 @@ private:
     }
 
     int quiscence(int alpha, int beta, Checkers& board) {
-        int eval{ evaluate(board) };
+        WDL result{ m_egtb.probe(board) };
+        int eval{ result == UNKNOWN ? evaluate(board) : (result == WIN ? infinity : (result == LOSS ? -infinity : 0)) };
+
+        m_egtbHits += (result != UNKNOWN);
 
         if (eval >= beta)
             return beta;
@@ -185,6 +189,7 @@ private:
         while (true) {
             m_nodesHit = 0;
             m_hashCollisions = 0;
+            m_egtbHits = 0;
 
             int result{ negamax(alpha, beta, depth, m_board) };
 
@@ -224,7 +229,7 @@ public:
                 aspirationWindowSearch(d++, score);
         }
 
-        if (printInfo) std::cout << "Evaluation: " << score << ' ' << "Depth: " << d - 1 << '\n';
+        if (printInfo) std::cout << "Evaluation: " << score << " Depth: " << d - 1 << " EGTB Hits: " << m_egtbHits << '\n';
 
         return extractPV();
     }
@@ -235,5 +240,9 @@ public:
 
     int getHashCollisions() {
         return m_hashCollisions;
+    }
+
+    int getEgtbHits() {
+        return m_egtbHits;
     }
 };
