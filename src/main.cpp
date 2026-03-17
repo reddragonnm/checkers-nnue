@@ -109,7 +109,7 @@ std::vector<int> attemptToMakeMove(int selected, int newPos, Checkers& board, AI
             board.makeMove(i);
             if (!board.isDarkTurn()) {
                 // auto aiMoves {ai.search(15)};
-                auto aiMoves{ ai.search(2000, false, true) };
+                auto aiMoves{ ai.search(200, false, true) };
                 if (aiMoves.empty()) {
                     std::cout << "YOU WIN!\n";
                     gameOver = true;

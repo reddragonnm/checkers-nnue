@@ -3,12 +3,14 @@
 #include <cassert>
 #include <chrono>
 #include <iostream>
+#include <limits>
 #include <map>
 
 #include "Checkers.hpp"
 #include "EGTB.hpp"
 
 constexpr int infinity{ 10000 };
+constexpr int searchAborted{ std::numeric_limits<int>::min() / 2 };
 
 enum { TTExact, TTUpper, TTLower };
 
@@ -32,6 +34,19 @@ private:
     int m_nodesHit{ 0 };
     int m_hashCollisions{ 0 };
     int m_egtbHits{ 0 };
+    bool m_stopSearch{ false };
+    bool m_hasDeadline{ false };
+    std::chrono::steady_clock::time_point m_deadline;
+
+    bool shouldStop() {
+        if (!m_hasDeadline || m_stopSearch)
+            return m_stopSearch;
+
+        if (std::chrono::steady_clock::now() >= m_deadline)
+            m_stopSearch = true;
+
+        return m_stopSearch;
+    }
 
     int evaluate(Checkers& board) {
         int dark{ std::popcount(board.getDarkPieces()) +
@@ -43,6 +58,9 @@ private:
     }
 
     int quiscence(int alpha, int beta, Checkers& board) {
+        if (shouldStop())
+            return searchAborted;
+
         WDL result{ m_egtb.probe(board) };
         int eval{ result == UNKNOWN ? evaluate(board) : (result == WIN ? infinity : (result == LOSS ? -infinity : 0)) };
 
@@ -66,6 +84,9 @@ private:
             }
             board.undoMove();
 
+            if (score == searchAborted)
+                return searchAborted;
+
             if (score >= beta)
                 return score;
             eval = std::max(eval, score);
@@ -75,6 +96,9 @@ private:
     }
 
     int negamax(int alpha, int beta, int depth, Checkers& board) {
+        if (shouldStop())
+            return searchAborted;
+
         std::uint64_t hash{ board.hash() };
         TTEntry& entry{ tt[hash & (ttSize - 1)] };
 
@@ -124,6 +148,9 @@ private:
                 }
 
                 board.undoMove();
+
+                if (score == searchAborted)
+                    return searchAborted;
 
                 if (score > bestVal) {
                     bestVal = score;
@@ -177,7 +204,7 @@ private:
         return pv;
     }
 
-    void aspirationWindowSearch(int depth, int& curScore) {
+    bool aspirationWindowSearch(int depth, int& curScore) {
         int delta{ 50 };
         int alpha{ -infinity };
         int beta{ infinity };
@@ -194,6 +221,9 @@ private:
 
             int result{ negamax(alpha, beta, depth, m_board) };
 
+            if (result == searchAborted)
+                return false;
+
             if (result <= alpha) {
                 alpha -= delta;
                 delta *= 2;
@@ -206,7 +236,7 @@ private:
             }
             else {
                 curScore = result;
-                break;
+                return true;
             }
         }
     }
@@ -217,22 +247,52 @@ public:
     std::vector<int> search(int input = 10, bool depthInput = true, bool printInfo = false) {
         int score{ 0 };
         int d{ 1 };
+        int completedDepth{ 0 };
+        int stoppedDepth{ 0 };
+        std::vector<int> completedPV;
+
+        m_stopSearch = false;
+        m_hasDeadline = !depthInput;
 
         if (depthInput) {
-            for (; d <= input; d++)
-                aspirationWindowSearch(d, score);
+            for (; d <= input; d++) {
+                if (!aspirationWindowSearch(d, score))
+                    break;
+
+                completedDepth = d;
+                completedPV = extractPV();
+            }
         }
         else {
-            auto start{ std::chrono::high_resolution_clock::now() };
-            while (std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::high_resolution_clock::now() - start)
-                .count() < input)
-                aspirationWindowSearch(d++, score);
+            m_deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(input);
+            while (!shouldStop()) {
+                stoppedDepth = d;
+                if (!aspirationWindowSearch(d, score))
+                    break;
+
+                completedDepth = d;
+                completedPV = extractPV();
+                d++;
+
+                // stop if terminal score reached
+                if (std::abs(score) == infinity)
+                    break;
+            }
         }
 
-        if (printInfo) std::cout << "Evaluation: " << score << " Depth: " << d - 1 << " EGTB Hits: " << m_egtbHits << '\n';
+        m_hasDeadline = false;
 
-        return extractPV();
+        if (completedPV.empty() && m_board.getNumMoves() > 0)
+            completedPV.push_back(0);
+
+        if (printInfo) {
+            std::cout << "Evaluation: " << score << " Depth: " << completedDepth;
+            if (!depthInput && m_stopSearch && stoppedDepth > completedDepth)
+                std::cout << " StoppedAt: " << stoppedDepth;
+            std::cout << " EGTB Hits: " << m_egtbHits << '\n';
+        }
+
+        return completedPV;
     }
 
     int getNodesHit() {
