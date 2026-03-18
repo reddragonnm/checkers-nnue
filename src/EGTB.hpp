@@ -409,10 +409,7 @@ public:
         }
         else {
             idx = getIndexLTM(b, a, board);
-            WDL val = getTableVal(b, a, idx);
-            if (val == WIN)  return LOSS;
-            if (val == LOSS) return WIN;
-            return val; // draw or unknown
+            return getTableVal(b, a, idx);
         }
     }
 };
