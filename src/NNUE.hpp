@@ -46,7 +46,11 @@ public:
     }
 
     Matrix<T> forward(Matrix<T> input) {
+        m_lastInput = input;
+        Matrix<T> output = (input * m_weights) + m_bias;
 
+        output.map(Activation::apply);
+        return output;
     }
 
     Matrix<T> backward(Matrix<T> error, double lr) {
