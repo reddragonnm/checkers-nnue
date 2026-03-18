@@ -61,14 +61,19 @@ private:
         if (shouldStop())
             return searchAborted;
 
-        WDL result{ m_egtb.probe(board) };
-        int eval{ result == UNKNOWN ? evaluate(board) : (result == WIN ? infinity : (result == LOSS ? -infinity : 0)) };
+        int eval{ evaluate(board) };
 
-        m_egtbHits += (result != UNKNOWN);
+        if (!board.isMidCapture()) {
+            WDL result{ m_egtb.probe(board) };
+            if (result != UNKNOWN) {
+                eval = result == WIN ? infinity : (result == LOSS ? -infinity : 0);
+                m_egtbHits++;
+            }
 
-        if (eval >= beta)
-            return beta;
-        alpha = std::max(alpha, eval);
+            if (eval >= beta)
+                return beta;
+            alpha = std::max(alpha, eval);
+        }
 
         const int numMoves{ board.getNumMoves() };
         if (numMoves == 0 || !board.isCaptureMove(board.getMoves()[0]))

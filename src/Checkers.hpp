@@ -504,4 +504,8 @@ public:
     bool isDarkTurn() const {
         return m_darkTurn;
     }
+
+    bool isMidCapture() const {
+        return m_midCapture;
+    }
 };

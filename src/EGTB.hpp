@@ -11,6 +11,7 @@
 #include <fstream>
 
 #include "Checkers.hpp"
+#include <functional>
 
 enum WDL : uint8_t { UNKNOWN = 0, DRAW = 1, WIN = 2, LOSS = 3 };
 
@@ -384,6 +385,9 @@ public:
     }
 
     WDL probe(const Checkers& board) const {
+        if (board.isMidCapture())
+            return UNKNOWN;
+
         int a{ std::popcount(board.getDarkPieces()) };
         int b{ std::popcount(board.getLightPieces()) };
 
