@@ -250,6 +250,7 @@ private:
 
                 if (childA < 0 || childA > 5 || childB < 0 || childB > 5
                     || m_tables[childB][childA].empty()) {
+                    std::cerr << "This should not happen\n";
                     allWin = false;
                     board.undoMove();
                     continue;

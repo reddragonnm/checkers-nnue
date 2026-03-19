@@ -57,18 +57,18 @@ private:
         return board.isDarkTurn() ? (dark - light) : (light - dark);
     }
 
-    int quiscence(int alpha, int beta, Checkers& board) {
+    int quiscence(int alpha, int beta, Checkers& board, int ply) {
         if (shouldStop())
             return searchAborted;
 
 
-        if (!board.isMidCapture()) {
-            WDL result{ m_egtb.probe(board) };
-            if (result != UNKNOWN) {
-                m_egtbHits++;
-                return result == WIN ? infinity : (result == LOSS ? -infinity : 0);
-            }
-        }
+        // if (!board.isMidCapture()) {
+        //     WDL result{ m_egtb.probe(board) };
+        //     if (result != UNKNOWN) {
+        //         m_egtbHits++;
+        //         return result == WIN ? infinity : (result == LOSS ? -infinity : 0);
+        //     }
+        // }
 
         int eval{ evaluate(board) };
         if (eval >= beta)
@@ -76,16 +76,21 @@ private:
         alpha = std::max(alpha, eval);
 
         const int numMoves{ board.getNumMoves() };
-        if (numMoves == 0 || !board.isCaptureMove(board.getMoves()[0]))
+        if (!board.isCaptureMove(board.getMoves()[0]))
             return eval;
+
+        if (board.isDraw())
+            return 0;
+        if (numMoves == 0)
+            return -infinity + ply;
 
         for (int i{ 0 }; i < numMoves; i++) {
             int score;
             if (board.makeMove(i)) {
-                score = -quiscence(-beta, -alpha, board);
+                score = -quiscence(-beta, -alpha, board, ply + 1);
             }
             else {
-                score = quiscence(alpha, beta, board);
+                score = quiscence(alpha, beta, board, ply);
             }
             board.undoMove();
 
@@ -100,7 +105,7 @@ private:
         return eval;
     }
 
-    int negamax(int alpha, int beta, int depth, Checkers& board) {
+    int negamax(int alpha, int beta, int depth, Checkers& board, int ply = 0) {
         if (shouldStop())
             return searchAborted;
 
@@ -111,12 +116,16 @@ private:
             m_hashCollisions++;
 
         if (entry.key == hash && entry.depth >= depth) {
+            int score{ entry.score };
+            if (score > infinity - 1000) score -= ply;
+            else if (score < -infinity + 1000) score += ply;
+
             if (entry.flag == TTExact)
-                return entry.score;
-            if (entry.flag == TTLower && entry.score >= beta)
-                return entry.score;
-            if (entry.flag == TTUpper && entry.score <= alpha)
-                return entry.score;
+                return score;
+            if (entry.flag == TTLower && score >= beta)
+                return score;
+            if (entry.flag == TTUpper && score <= alpha)
+                return score;
         }
 
         int hashMove{ -1 };
@@ -128,9 +137,9 @@ private:
         if (board.isDraw())
             return 0;
         if (numMoves == 0)
-            return -infinity;
+            return -infinity + ply;
         if (depth == 0)
-            return quiscence(alpha, beta, board);
+            return quiscence(alpha, beta, board, ply);
 
         int alphaOrg{ alpha };
         int bestVal{ -infinity };
@@ -146,10 +155,10 @@ private:
                 int score;
                 if (board.makeMove(i)) { // turn switched
                     m_nodesHit++;
-                    score = -negamax(-beta, -alpha, depth - 1, board);
+                    score = -negamax(-beta, -alpha, depth - 1, board, ply + 1);
                 }
                 else {
-                    score = negamax(alpha, beta, depth, board);
+                    score = negamax(alpha, beta, depth, board, ply);
                 }
 
                 board.undoMove();
@@ -168,10 +177,14 @@ private:
             }
         }
 
+        int val{ bestVal };
+        if (val > infinity - 1000) val += ply;
+        else if (val < -infinity + 1000) val -= ply;
+
         if (entry.key != hash || entry.depth <= depth) {
             entry.key = hash;
             entry.depth = depth;
-            entry.score = bestVal;
+            entry.score = val;
             entry.move = bestMove;
 
             if (bestVal <= alphaOrg)
@@ -211,8 +224,8 @@ private:
 
     bool aspirationWindowSearch(int depth, int& curScore) {
         int delta{ 50 };
-        int alpha{ -infinity };
-        int beta{ infinity };
+        int alpha{ -2 * infinity };
+        int beta{ 2 * infinity };
 
         // if (depth >= 4 && std::abs(curScore) != infinity) {
         //     alpha = curScore - delta;
@@ -229,15 +242,30 @@ private:
             if (result == searchAborted)
                 return false;
 
+            // if (result <= alpha) {
+            //     alpha -= delta;
+            //     delta *= 2;
+            //     // if (alpha <= -infinity) alpha = -infinity;
+            // }
+            // else if (result > beta) {
+            //     beta += delta;
+            //     delta *= 2;
+            //     // if (beta >= infinity) beta = infinity;
+            // }
+
             if (result <= alpha) {
-                alpha -= delta;
-                delta *= 2;
-                // if (alpha <= -infinity) alpha = -infinity;
+                if (result < -infinity + 100) alpha = -2 * infinity;
+                else {
+                    alpha -= delta;
+                    delta *= 2;
+                }
             }
             else if (result > beta) {
-                beta += delta;
-                delta *= 2;
-                // if (beta >= infinity) beta = infinity;
+                if (result > infinity - 100) beta = 2 * infinity;
+                else {
+                    beta += delta;
+                    delta *= 2;
+                }
             }
             else {
                 curScore = result;
@@ -280,8 +308,8 @@ public:
                 d++;
 
                 // stop if terminal score reached
-                if (std::abs(score) == infinity)
-                    break;
+                // if (std::abs(score) == infinity)
+                //     break;
             }
         }
 
