@@ -2,9 +2,9 @@
 
 #include <iostream>
 
-#include "Checkers.hpp"
-#include "AIPlayer.hpp"
-#include "EGTB.hpp"
+#include "headers/Checkers.hpp"
+#include "headers/AIPlayer.hpp"
+#include "headers/EGTB.hpp"
 
 constexpr int squareSize{ 100 };
 

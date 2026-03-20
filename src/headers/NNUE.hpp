@@ -4,38 +4,36 @@
 
 #include "Matrix.hpp"
 
-template <typename T>
 struct ClampedRelu {
-    static T apply(T x) {
-        return std::max(static_cast<T>(0), std::min(x, static_cast<T>(1)));
+    static float apply(float x) {
+        return std::max(0.f, std::min(x, static_cast<float>(1)));
     }
 
-    static T derivative(T x) {
-        return (x > static_cast<T>(0) && x < static_cast<T>(1)) ? static_cast<T>(1) : static_cast<T>(0);
+    static float derivative(float x) {
+        return (x > 0.f && x < 1.f) ? 1.f : 0.f;
     }
 };
 
-template <typename T>
 struct Linear {
-    static T apply(T x) {
+    static float apply(float x) {
         return x;
     }
 
-    static T derivative(T x) {
-        return static_cast<T>(1);
+    static float derivative(float x) {
+        return 1.0f;
     }
 };
 
-template <typename T, typename Activation>
+template <typename Activation>
 class Layer {
 private:
     int m_numInputs;
     int m_numOutputs;
 
-    Matrix<T> m_lastInput;
+    Matrix m_lastInput;
 
-    Matrix<T> m_weights;
-    Matrix<T> m_bias;
+    Matrix m_weights;
+    Matrix m_bias;
 
 public:
     Layer(int numInputs, int numOutputs) :
@@ -45,25 +43,24 @@ public:
         m_bias(1, numOutputs) { // going to need broadcast add
     }
 
-    Matrix<T> forward(Matrix<T> input) {
+    Matrix forward(Matrix input) {
         m_lastInput = input;
-        Matrix<T> output = (input * m_weights) + m_bias;
+        Matrix output = (input * m_weights) + m_bias;
 
         output.map(Activation::apply);
         return output;
     }
 
-    Matrix<T> backward(Matrix<T> error, double lr) {
+    Matrix backward(Matrix error, double lr) {
 
     }
 };
 
-template <typename T>
 class NNUE {
 private:
-    Layer<T, ClampedRelu<T>> m_accumulator;
-    std::vector<Layer<T, ClampedRelu<T>>> m_hiddenLayers;
-    Layer<T, Linear<T>> m_outputLayer;
+    Layer<ClampedRelu> m_accumulator;
+    std::vector<Layer<ClampedRelu>> m_hiddenLayers;
+    Layer<Linear> m_outputLayer;
 
 public:
     NNUE(std::vector<int> layerSizes) : m_accumulator(layerSizes[0], layerSizes[1]), m_outputLayer(layerSizes[layerSizes.size() - 2], layerSizes.back()) {
@@ -72,7 +69,7 @@ public:
         }
     }
 
-    Matrix<T> forward(Matrix<T> input) {
+    Matrix forward(Matrix input) {
 
     }
 };

@@ -282,7 +282,7 @@ public:
         }
         else {
             m_deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(input);
-            while (!shouldStop()) {
+            while (!shouldStop() && d <= 200) {
                 stoppedDepth = d;
                 if (!aspirationWindowSearch(d, score))
                     break;
@@ -290,10 +290,6 @@ public:
                 completedDepth = d;
                 completedPV = extractPV();
                 d++;
-
-                // stop if terminal score reached
-                // if (std::abs(score) == infinity)
-                //     break;
             }
         }
 
