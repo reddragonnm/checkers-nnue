@@ -223,54 +223,38 @@ private:
     }
 
     bool aspirationWindowSearch(int depth, int& curScore) {
-        int delta{ 50 };
-        int alpha{ -2 * infinity };
-        int beta{ 2 * infinity };
+        int delta = 50;
+        int alpha = curScore - delta;
+        int beta = curScore + delta;
 
-        // if (depth >= 4 && std::abs(curScore) != infinity) {
-        //     alpha = curScore - delta;
-        //     beta = curScore + delta;
-        // }
+        m_nodesHit = 0;
+        m_egtbHits = 0;
+        m_hashCollisions = 0;
+
+        if (depth < 4) {
+            alpha = -2 * infinity;
+            beta = 2 * infinity;
+        }
 
         while (true) {
-            m_nodesHit = 0;
-            m_hashCollisions = 0;
-            m_egtbHits = 0;
+            int result = negamax(alpha, beta, depth, m_board);
 
-            int result{ negamax(alpha, beta, depth, m_board) };
-
-            if (result == searchAborted)
-                return false;
-
-            // if (result <= alpha) {
-            //     alpha -= delta;
-            //     delta *= 2;
-            //     // if (alpha <= -infinity) alpha = -infinity;
-            // }
-            // else if (result > beta) {
-            //     beta += delta;
-            //     delta *= 2;
-            //     // if (beta >= infinity) beta = infinity;
-            // }
+            if (result == searchAborted) return false;
 
             if (result <= alpha) {
-                if (result < -infinity + 100) alpha = -2 * infinity;
-                else {
-                    alpha -= delta;
-                    delta *= 2;
-                }
+                beta = (alpha + beta) / 2;
+                alpha = std::max(result - delta, -2 * infinity);
             }
-            else if (result > beta) {
-                if (result > infinity - 100) beta = 2 * infinity;
-                else {
-                    beta += delta;
-                    delta *= 2;
-                }
+            else if (result >= beta) {
+                alpha = (alpha + beta) / 2;
+                beta = std::min(result + delta, 2 * infinity);
             }
             else {
                 curScore = result;
                 return true;
             }
+
+            delta += delta / 2;
         }
     }
 

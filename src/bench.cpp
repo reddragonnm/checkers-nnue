@@ -52,44 +52,38 @@ int main() {
     int draws{ 0 };
 
     for (int i{ 0 }; i < 1000; i++) {
-        int moves{ 0 };
+        bool v1IsDark{ i % 2 == 0 };
+        int numMoves{ 0 };
+
         while (true) {
-            auto v1Moves{ v1Player.search(100, false) };
-            if (v1Moves.empty()) {
-                // std::cout << "V2 WINS!\n";
-                v2Wins++;
+            std::vector<int> moves;
+            bool isV1Turn = (board.isDarkTurn() == v1IsDark);
+
+            if (isV1Turn)
+                moves = v1Player.search(100, false);
+            else
+                moves = v2Player.search(100, false);
+
+            if (moves.empty()) {
+                if (isV1Turn) v2Wins++;
+                else v1Wins++;
                 break;
             }
 
+            for (int m : moves) board.makeMove(m);
+
             if (board.isDraw()) {
-                // std::cout << "DRAW!\n";
                 draws++;
                 break;
             }
 
-            for (int move : v1Moves)
-                board.makeMove(move);
-
-            auto v2Moves{ v2Player.search(100, false) };
-            if (v2Moves.empty()) {
-                // std::cout << "V1 WINS!\n";
-                v1Wins++;
-                break;
-            }
-            for (int move : v2Moves)
-                board.makeMove(move);
-
-            if (board.isDraw()) {
-                // std::cout << "DRAW!\n";
-                draws++;
-                break;
-            }
-
-            moves++;
-            std::cout << "Game " << i + 1 << " Move " << moves << "\n";
+            numMoves++;
+            std::cout << "Game " << i + 1 << ": Move " << numMoves << "\n";
         }
 
         std::cout << "Game " << i + 1 << ": V1 Wins: " << v1Wins << " V2 Wins: " << v2Wins << " Draws: " << draws << "\n";
         board.reset();
+        v1Player.resetTT();
+        v2Player.resetTT();
     }
 }
