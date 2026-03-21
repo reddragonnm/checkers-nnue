@@ -29,4 +29,9 @@ target_compile_features(matchmake PRIVATE cxx_std_23)
 target_compile_options(matchmake PRIVATE -O3 -march=native -ffast-math)
 target_compile_definitions(matchmake PRIVATE NDEBUG)
 
+add_executable(trainNNUE src/trainNNUE.cpp)
+target_compile_features(trainNNUE PRIVATE cxx_std_23)
+target_compile_options(trainNNUE PRIVATE -O3 -march=native -ffast-math)
+target_compile_definitions(trainNNUE PRIVATE NDEBUG)
+
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT main)

@@ -24,6 +24,14 @@ struct Linear {
     }
 };
 
+inline Matrix MSE(const Matrix& output, const Matrix& target) {
+    assert(output.numCols() == target.numCols() && output.numRows() == target.numRows());
+
+    Matrix diff{ output + (target * -1.f) };
+    float scale{ 2.f / output.numRows() };
+    return diff * scale;
+}
+
 template <typename Activation>
 class Layer {
 private:
@@ -31,6 +39,7 @@ private:
     int m_numOutputs;
 
     Matrix m_lastInput;
+    Matrix m_lastPreActivation;
 
     Matrix m_weights;
     Matrix m_bias;
@@ -41,18 +50,31 @@ public:
         m_numOutputs(numOutputs),
         m_weights(numInputs, numOutputs),
         m_bias(1, numOutputs) { // going to need broadcast add
+        m_weights.randomInit();
     }
 
     Matrix forward(Matrix input) {
         m_lastInput = input;
-        Matrix output = (input * m_weights) + m_bias;
+        m_lastPreActivation = (input * m_weights) + m_bias;
+        Matrix output{ m_lastPreActivation };
 
         output.map(Activation::apply);
         return output;
     }
 
-    Matrix backward(Matrix error, double lr) {
+    Matrix backward(Matrix error, float lr) {
+        Matrix delta{ m_lastPreActivation };
+        delta.map(Activation::derivative);
+        delta.hadamard(error);
 
+        Matrix dW{ m_lastInput.transpose() * delta };
+        Matrix dB{ delta.columnSum() };
+
+        Matrix inputError{ delta * m_weights.transpose() };
+
+        m_weights = m_weights + (dW * (-lr));
+        m_bias = m_bias + (dB * (-lr));
+        return inputError;
     }
 };
 
@@ -70,6 +92,18 @@ public:
     }
 
     Matrix forward(Matrix input) {
+        Matrix x{ m_accumulator.forward(input) };
+        for (auto& layer : m_hiddenLayers) {
+            x = layer.forward(x);
+        }
+        return m_outputLayer.forward(x);
+    }
 
+    void backward(Matrix error, float lr) {
+        Matrix grad{ m_outputLayer.backward(error, lr) };
+        for (int i{ static_cast<int>(m_hiddenLayers.size()) - 1 }; i >= 0; i--) {
+            grad = m_hiddenLayers[i].backward(grad, lr);
+        }
+        m_accumulator.backward(grad, lr);
     }
 };
