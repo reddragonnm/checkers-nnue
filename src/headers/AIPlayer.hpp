@@ -283,7 +283,7 @@ private:
 public:
     AIPlayer(Checkers& board, EGTB& egtb, NNUEInference& nnue) : m_board(board), m_egtb(egtb), m_nnue(nnue), m_nodesHit(0), tt(ttSize, { 0, -1, 0, -1, 0 }) {}
 
-    std::vector<int> search(int input = 10, bool depthInput = true, bool printInfo = false) {
+    std::pair<int, std::vector<int>> search(int input = 10, bool depthInput = true, bool printInfo = false) {
         int score{ 0 };
         int d{ 1 };
         int completedDepth{ 0 };
@@ -327,7 +327,7 @@ public:
             std::cout << " EGTB Hits: " << m_egtbHits << '\n';
         }
 
-        return completedPV;
+        return { score, completedPV };
     }
 
     int getNodesHit() {

@@ -112,11 +112,11 @@ std::vector<int> attemptToMakeMove(int selected, int newPos, Checkers& board, AI
             if (!board.isDarkTurn()) {
                 // auto aiMoves {ai.search(15)};
                 auto aiMoves{ ai.search(500, false, true) };
-                if (aiMoves.empty()) {
+                if (aiMoves.second.empty()) {
                     std::cout << "YOU WIN!\n";
                     gameOver = true;
                 }
-                return aiMoves;
+                return aiMoves.second;
             }
             else
                 return {};
