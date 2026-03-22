@@ -5,6 +5,8 @@
 #include "headers/Checkers.hpp"
 #include "headers/AIPlayer.hpp"
 #include "headers/EGTB.hpp"
+#include "headers/NNUE.hpp"
+#include "headers/NNUEInference.hpp"
 
 constexpr int squareSize{ 100 };
 
@@ -132,8 +134,11 @@ int main() {
     EGTB egtb;
     egtb.buildOrLoad("egtb.bin");
 
+    NNUE nnue{ {128, 256, 32, 1} };
+    NNUEInference nnueInference{ nnue };
+
     Checkers board{};
-    AIPlayer ai{ board, egtb };
+    AIPlayer ai{ board, egtb, nnueInference };
 
     bool gameOver{ false };
 

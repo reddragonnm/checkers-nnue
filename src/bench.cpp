@@ -7,6 +7,8 @@
 #include "headers/Checkers.hpp"
 #include "headers/AIPlayer.hpp"
 #include "headers/EGTB.hpp"
+#include "headers/NNUE.hpp"
+#include "headers/NNUEInference.hpp"
 
 int main() {
     int maxDepth{ 20 };
@@ -14,8 +16,11 @@ int main() {
     EGTB egtb;
     egtb.buildOrLoad("egtb.bin");
 
+    NNUE nnue{ {128, 256, 32, 1} };
+    NNUEInference nnueInference{ nnue };
+
     Checkers board{};
-    AIPlayer ai{ board, egtb };
+    AIPlayer ai{ board, egtb, nnueInference };
 
     std::cout << std::left << std::setw(8) << "Depth" << std::setw(15) << "Nodes" << std::setw(15)
         << "Time(ms)" << std::setw(15) << "NPS" << std::setw(15) << "Collisions" << std::setw(15) << "EGTB Hits"

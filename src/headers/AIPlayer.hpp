@@ -8,6 +8,7 @@
 
 #include "Checkers.hpp"
 #include "EGTB.hpp"
+#include "NNUEInference.hpp"
 
 constexpr int infinity{ 10000 };
 constexpr int searchAborted{ std::numeric_limits<int>::min() / 2 };
@@ -28,6 +29,7 @@ class AIPlayer {
 private:
     Checkers& m_board;
     EGTB& m_egtb;
+    NNUEInference& m_nnue;
 
     std::vector<TTEntry> tt;
 
@@ -48,13 +50,33 @@ private:
         return m_stopSearch;
     }
 
-    int evaluate(Checkers& board) {
-        int dark{ std::popcount(board.getDarkPieces()) +
-                 std::popcount(board.getDarkPieces() & board.getKingPieces()) };
-        int light{ std::popcount(board.getLightPieces()) +
-                  std::popcount(board.getLightPieces() & board.getKingPieces()) };
+    std::uint64_t flipBoard(std::uint64_t board) const {
+        // flip board for light pieces to reuse dark move generation
+        std::uint64_t flipped{ 0 };
+        for (int i{ 0 }; i < 64; i++) {
+            if ((board >> i) & 1)
+                flipped |= (1ULL << (63 - i));
+        }
+        return flipped;
+    }
 
-        return board.isDarkTurn() ? (dark - light) : (light - dark);
+    int evaluate(Checkers& board) {
+        // int dark{ std::popcount(board.getDarkPieces()) +
+        //          std::popcount(board.getDarkPieces() & board.getKingPieces()) };
+        // int light{ std::popcount(board.getLightPieces()) +
+        //           std::popcount(board.getLightPieces() & board.getKingPieces()) };
+
+        // return board.isDarkTurn() ? (dark - light) : (light - dark);
+
+        std::bitset<128> features;
+        if (board.isDarkTurn()) {
+            features = NNUEInference::encodeBoard(board.getDarkPieces(), board.getLightPieces(), board.getKingPieces());
+        }
+        else {
+            features = NNUEInference::encodeBoard(flipBoard(board.getLightPieces()), flipBoard(board.getDarkPieces()), flipBoard(board.getKingPieces()));
+        }
+        float output{ m_nnue.forward(features) };
+        return static_cast<int>(std::clamp(output * 100, -200.f, 200.f));
     }
 
     int quiscence(int alpha, int beta, Checkers& board, int ply) {
@@ -259,7 +281,7 @@ private:
     }
 
 public:
-    AIPlayer(Checkers& board, EGTB& egtb) : m_board(board), m_egtb(egtb), m_nodesHit(0), tt(ttSize, { 0, -1, 0, -1, 0 }) {}
+    AIPlayer(Checkers& board, EGTB& egtb, NNUEInference& nnue) : m_board(board), m_egtb(egtb), m_nnue(nnue), m_nodesHit(0), tt(ttSize, { 0, -1, 0, -1, 0 }) {}
 
     std::vector<int> search(int input = 10, bool depthInput = true, bool printInfo = false) {
         int score{ 0 };

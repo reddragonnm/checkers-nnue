@@ -53,7 +53,7 @@ public:
         m_weights.randomInit();
     }
 
-    Matrix forward(Matrix input) {
+    Matrix forward(const Matrix& input) {
         m_lastInput = input;
         m_lastPreActivation = (input * m_weights) + m_bias;
         Matrix output{ m_lastPreActivation };
@@ -62,7 +62,7 @@ public:
         return output;
     }
 
-    Matrix backward(Matrix error, float lr) {
+    Matrix backward(const Matrix& error, float lr) {
         Matrix delta{ m_lastPreActivation };
         delta.map(Activation::derivative);
         delta.hadamard(error);
@@ -75,6 +75,14 @@ public:
         m_weights = m_weights + (dW * (-lr));
         m_bias = m_bias + (dB * (-lr));
         return inputError;
+    }
+
+    const Matrix& getWeights() const {
+        return m_weights;
+    }
+
+    const Matrix& getBias() const {
+        return m_bias;
     }
 };
 
@@ -91,7 +99,7 @@ public:
         }
     }
 
-    Matrix forward(Matrix input) {
+    Matrix forward(const Matrix& input) {
         Matrix x{ m_accumulator.forward(input) };
         for (auto& layer : m_hiddenLayers) {
             x = layer.forward(x);
@@ -99,11 +107,23 @@ public:
         return m_outputLayer.forward(x);
     }
 
-    void backward(Matrix error, float lr) {
+    void backward(const Matrix& error, float lr) {
         Matrix grad{ m_outputLayer.backward(error, lr) };
         for (int i{ static_cast<int>(m_hiddenLayers.size()) - 1 }; i >= 0; i--) {
             grad = m_hiddenLayers[i].backward(grad, lr);
         }
         m_accumulator.backward(grad, lr);
+    }
+
+    const Layer<ClampedRelu>& getAccumulator() const {
+        return m_accumulator;
+    }
+
+    const Layer<ClampedRelu>& getHiddenLayer(int i) const {
+        return m_hiddenLayers[i];
+    }
+
+    const Layer<Linear>& getOutputLayer() const {
+        return m_outputLayer;
     }
 };

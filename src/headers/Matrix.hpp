@@ -6,8 +6,8 @@
 
 class Matrix {
 private:
-    int m_cols{};
     int m_rows{};
+    int m_cols{};
 
     std::vector<float> m_data{};
 public:
@@ -36,7 +36,12 @@ public:
         }
     }
 
-    float& operator[](int row, int col) {
+    float operator()(int row, int col) const {
+        assert(row >= 0 && row < m_rows && col >= 0 && col < m_cols);
+        return m_data[row * m_cols + col];
+    }
+
+    float& operator()(int row, int col) {
         assert(row >= 0 && row < m_rows && col >= 0 && col < m_cols);
         return m_data[row * m_cols + col];
     }
