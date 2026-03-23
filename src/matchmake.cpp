@@ -8,6 +8,7 @@
 #include "headers/NNUE.hpp"
 #include "headers/Checkers.hpp"
 #include "headers/EGTB.hpp"
+#include "headers/NNUEInference.hpp"
 
 #include "matchmaking/v1.hpp"
 #include "matchmaking/v2.hpp"
@@ -126,12 +127,15 @@ int main() {
     EGTB egtb;
     egtb.buildOrLoad("egtb.bin");
 
+    NNUE nnueV2{ {128, 256, 32, 1} }; nnueV2.load("checkpoints/nnue_4000.bin");
+    NNUEInference nnueInferenceV2{ nnueV2 };
+
     int v1Wins{ 0 };
     int v2Wins{ 0 };
     int draws{ 0 };
 
     auto v1Player{ v1::AIPlayer(board, egtb) };
-    auto v2Player{ v2::AIPlayer(board, egtb) };
+    auto v2Player{ v2::AIPlayer(board, egtb, nnueInferenceV2) };
 
 
     for (int i{ 0 }; i < 1000; i++) {
@@ -152,9 +156,9 @@ int main() {
             bool isV1Turn = (board.isDarkTurn() == v1IsDark);
 
             if (isV1Turn)
-                std::tie(score, moves) = v1Player.search(500, false);
+                std::tie(score, moves) = v1Player.search(100, false);
             else
-                std::tie(score, moves) = v2Player.search(500, false);
+                std::tie(score, moves) = v2Player.search(100, false);
 
             if (moves.empty()) {
                 if (isV1Turn) v2Wins++;

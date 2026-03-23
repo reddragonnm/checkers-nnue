@@ -134,7 +134,7 @@ int main() {
     EGTB egtb;
     egtb.buildOrLoad("egtb.bin");
 
-    NNUE nnue{ {128, 256, 32, 1} };
+    NNUE nnue{ {128, 256, 32, 1} }; nnue.load("checkpoints/nnue_4000.bin");
     NNUEInference nnueInference{ nnue };
 
     Checkers board{};
