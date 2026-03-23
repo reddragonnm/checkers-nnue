@@ -10,7 +10,8 @@
 #include "EGTB.hpp"
 #include "NNUEInference.hpp"
 
-constexpr int infinity{ 10000 };
+constexpr int infinity{ 200 };
+constexpr int infinityThreshold{ 50 };
 constexpr int searchAborted{ std::numeric_limits<int>::min() / 2 };
 
 enum { TTExact, TTUpper, TTLower };
@@ -139,8 +140,8 @@ private:
 
         if (entry.key == hash && entry.depth >= depth) {
             int score{ entry.score };
-            if (score > infinity - 1000) score -= ply;
-            else if (score < -infinity + 1000) score += ply;
+            if (score > infinity - infinityThreshold) score -= ply;
+            else if (score < -infinity + infinityThreshold) score += ply;
 
             if (entry.flag == TTExact)
                 return score;
@@ -200,8 +201,8 @@ private:
         }
 
         int val{ bestVal };
-        if (val > infinity - 1000) val += ply;
-        else if (val < -infinity + 1000) val -= ply;
+        if (val > infinity - infinityThreshold) val += ply;
+        else if (val < -infinity + infinityThreshold) val -= ply;
 
         if (entry.key != hash || entry.depth <= depth) {
             entry.key = hash;

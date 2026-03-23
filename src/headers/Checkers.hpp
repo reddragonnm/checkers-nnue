@@ -465,8 +465,19 @@ public:
         return m_hash;
     }
 
+    bool isThreefoldRepetition() const {
+        int count{ 1 };
+        for (const auto& state : m_history) {
+            if (state.hash == m_hash) {
+                count++;
+                if (count >= 3) return true;
+            }
+        }
+        return false;
+    }
+
     bool isDraw() const {
-        return m_drawCounter >= 80 || (m_lightPieces == 0 && m_darkPieces == 0);
+        return m_drawCounter >= 80 || (m_lightPieces == 0 && m_darkPieces == 0) || isThreefoldRepetition();
     }
 
     bool isCaptureMove(std::uint16_t move) const {

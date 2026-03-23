@@ -26,6 +26,7 @@ target_compile_definitions(bench PRIVATE NDEBUG)
 
 add_executable(matchmake src/matchmake.cpp)
 target_compile_features(matchmake PRIVATE cxx_std_23)
+target_link_libraries(matchmake PRIVATE SFML::Graphics SFML::Network)
 target_compile_options(matchmake PRIVATE -O3 -march=native -ffast-math)
 target_compile_definitions(matchmake PRIVATE NDEBUG)
 
