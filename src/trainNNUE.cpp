@@ -153,8 +153,9 @@ void eloCheck(const std::string& v1, const std::string& v2) {
         v2Player.resetTT();
     }
 
+    float epsilon{ 1e-8f };
     float winRate{ (v1Wins + 0.5f * draws) / eloEvalGames };
-    float eloDiff{ -400.f * std::log10((1.f / winRate) - 1.f) };
+    float eloDiff{ -400.f * std::log10((1.f / (winRate + epsilon)) - 1.f) };
     std::cout << "ELO Difference vs previous checkpoint: " << eloDiff << "\n";
 }
 
@@ -183,7 +184,7 @@ int main() {
             int light{ std::popcount(board.getLightPieces()) +
                       std::popcount(board.getLightPieces() & board.getKingPieces()) };
 
-            float target{ (dark - light) / 24.f };
+            float target{ board.isDarkTurn() ? (dark - light) / 24.f : (light - dark) / 24.f };
 
             buffer.add(features, target);
 
@@ -193,13 +194,13 @@ int main() {
     }
     std::cout << "Warmup complete, buffer: " << buffer.size() << " positions\n";
 
-    int games{ nnue.trainGames };
-
     // main loop
     std::uniform_real_distribution<float> uniformDist(0.f, 1.f);
     while (true) {
+        const int nextGame{ nnue.trainGames + 1 };
+
         // self play game
-        std::cout << "Starting game " << games + 1 << "\n";
+        std::cout << "Starting game " << nextGame << "\n";
         board.reset();
         ai.resetTT();
 
@@ -208,7 +209,7 @@ int main() {
 
             auto [score, pv] { ai.search(trainSearchDepth) };
 
-            buffer.add(features, score / infinity);
+            buffer.add(features, static_cast<float>(score) / infinity);
 
             if (uniformDist(rng) < exploreRate) {
                 while (true) {
@@ -225,7 +226,7 @@ int main() {
             }
         }
 
-        std::cout << "Game " << games + 1 << " finished. Result: ";
+        std::cout << "Game " << nextGame << " finished. Result: ";
         if (board.isDraw()) std::cout << "Draw\n";
         else if (board.isDarkTurn()) std::cout << "Light wins\n";
         else std::cout << "Dark wins\n";
@@ -244,32 +245,31 @@ int main() {
             Matrix error{ mseDiff(output, targets) };
             nnue.backward(error, lr);
         }
-        nnue.trainGames++;
 
         avgMSE /= trainStepsPerGame;
-        std::cout << "Training " << games + 1 << " complete. Avg MSE: " << avgMSE << "\n";
+        std::cout << "Training " << nextGame << " complete. Avg MSE: " << avgMSE << "\n";
 
         // periodic stuff
-        if (games % lrDecayEvery == 0) {
+        if (nextGame % lrDecayEvery == 0) {
             lr *= lrDecayFactor;
-            std::cout << "Step " << games << ", LR decayed to " << lr << "\n";
+            std::cout << "Step " << nextGame << ", LR decayed to " << lr << "\n";
         }
 
-        if (games % saveLatestEvery == 0) {
+        if (nextGame % saveLatestEvery == 0 && nextGame > 0) {
             nnue.save("checkpoints/nnue_latest.bin");
         }
 
-        if (games % checkpointEvery == 0) {
-            nnue.save("checkpoints/nnue_" + std::to_string(games) + ".bin");
-            std::cout << "Checkpoint saved at step " << games << "\n";
+        if (nextGame % checkpointEvery == 0 && nextGame > 0) {
+            nnue.save("checkpoints/nnue_" + std::to_string(nextGame) + ".bin");
+            std::cout << "Checkpoint saved at step " << nextGame << "\n";
 
-            if (games > checkpointEvery) { // skip first
+            if (nextGame > 0) { // skip first
                 std::cout << "Starting ELO evaluation\n";
-                eloCheck("checkpoints/nnue_" + std::to_string(games) + ".bin", "checkpoints/nnue_" + std::to_string(games - checkpointEvery) + ".bin");
+                eloCheck("checkpoints/nnue_" + std::to_string(nextGame) + ".bin", "checkpoints/nnue_" + std::to_string(nextGame - checkpointEvery) + ".bin");
             }
         }
 
         nnueInference.updateWeights();
-        games++;
+        nnue.trainGames = nextGame;
     }
 }

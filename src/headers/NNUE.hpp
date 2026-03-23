@@ -212,7 +212,7 @@ public:
 
         m_accumulator.save(out);
 
-        int numHidden{ m_hiddenLayers.size() };
+        int numHidden{ static_cast<int>(m_hiddenLayers.size()) };
         out.write(reinterpret_cast<const char*>(&numHidden), sizeof(int));
         for (const auto& layer : m_hiddenLayers) {
             layer.save(out);
