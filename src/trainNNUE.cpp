@@ -35,6 +35,7 @@ struct Data {
 
 struct Buffer {
     std::vector<Data> data;
+    int index{ 0 };
 
     Buffer() {
         data.reserve(bufferCapacity);
@@ -45,9 +46,8 @@ struct Buffer {
             data.push_back({ features, target });
         }
         else {
-            std::uniform_int_distribution<int> dist(0, bufferCapacity - 1);
-            int idx{ dist(rng) };
-            data[idx] = { features, target };
+            data[index] = { features, target };
+            index = (index + 1) % bufferCapacity;
         }
     };
 
@@ -159,6 +159,18 @@ void eloCheck(const std::string& v1, const std::string& v2) {
     std::cout << "ELO Difference vs previous checkpoint: " << eloDiff << "\n";
 }
 
+float calculateMSE(const Matrix& output, const Matrix& target) {
+    float totalError{ 0.f };
+    int n = output.numRows();
+
+    for (int i = 0; i < n; i++) {
+        float error = output(i, 0) - target(i, 0);
+        totalError += (error * error);
+    }
+
+    return totalError / n;
+}
+
 int main() {
     EGTB egtb;
     egtb.buildOrLoad("egtb.bin");
@@ -197,10 +209,8 @@ int main() {
     // main loop
     std::uniform_real_distribution<float> uniformDist(0.f, 1.f);
     while (true) {
-        const int nextGame{ nnue.trainGames + 1 };
-
         // self play game
-        std::cout << "Starting game " << nextGame << "\n";
+        std::cout << "Starting game " << nnue.trainGames << "\n";
         board.reset();
         ai.resetTT();
 
@@ -226,10 +236,11 @@ int main() {
             }
         }
 
-        std::cout << "Game " << nextGame << " finished. Result: ";
+        std::cout << "Game " << nnue.trainGames << " finished. Result: ";
         if (board.isDraw()) std::cout << "Draw\n";
         else if (board.isDarkTurn()) std::cout << "Light wins\n";
         else std::cout << "Dark wins\n";
+        std::cout << "Buffer size: " << buffer.size() << "\n";
 
         // training
         float avgMSE{ 0.f };
@@ -237,9 +248,7 @@ int main() {
             auto [features, targets] { buffer.sampleBatch(batchSize) };
             Matrix output{ nnue.forward(features) };
 
-            auto diff{ output + (targets * -1.f) };
-            diff.hadamard(diff);
-            float mse{ diff.columnSum().transpose().columnSum()(0, 0) / batchSize };
+            float mse{ calculateMSE(output, targets) };
             avgMSE += mse;
 
             Matrix error{ mseDiff(output, targets) };
@@ -247,29 +256,30 @@ int main() {
         }
 
         avgMSE /= trainStepsPerGame;
-        std::cout << "Training " << nextGame << " complete. Avg MSE: " << avgMSE << "\n";
+        std::cout << "Training " << nnue.trainGames << " complete. Avg MSE: " << avgMSE << "\n";
 
         // periodic stuff
-        if (nextGame % lrDecayEvery == 0) {
+        if (nnue.trainGames != 0 && nnue.trainGames % lrDecayEvery == 0) {
             lr *= lrDecayFactor;
-            std::cout << "Step " << nextGame << ", LR decayed to " << lr << "\n";
+            std::cout << "Step " << nnue.trainGames << ", LR decayed to " << lr << "\n";
         }
 
-        if (nextGame % saveLatestEvery == 0 && nextGame > 0) {
+        if (nnue.trainGames % saveLatestEvery == 0) {
             nnue.save("checkpoints/nnue_latest.bin");
         }
 
-        if (nextGame % checkpointEvery == 0 && nextGame > 0) {
-            nnue.save("checkpoints/nnue_" + std::to_string(nextGame) + ".bin");
-            std::cout << "Checkpoint saved at step " << nextGame << "\n";
+        if (nnue.trainGames != 0 && nnue.trainGames % checkpointEvery == 0) {
+            nnue.save("checkpoints/nnue_" + std::to_string(nnue.trainGames) + ".bin");
+            std::cout << "Checkpoint saved at step " << nnue.trainGames << "\n";
 
-            if (nextGame > 0) { // skip first
+            if (nnue.trainGames != checkpointEvery) { // skip first
                 std::cout << "Starting ELO evaluation\n";
-                eloCheck("checkpoints/nnue_" + std::to_string(nextGame) + ".bin", "checkpoints/nnue_" + std::to_string(nextGame - checkpointEvery) + ".bin");
+                eloCheck("checkpoints/nnue_" + std::to_string(nnue.trainGames) + ".bin", "checkpoints/nnue_" + std::to_string(nnue.trainGames - checkpointEvery) + ".bin");
             }
         }
+        std::cout << "\n";
 
         nnueInference.updateWeights();
-        nnue.trainGames = nextGame;
+        nnue.trainGames++;
     }
 }
