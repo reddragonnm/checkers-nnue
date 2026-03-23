@@ -35,6 +35,9 @@ inline Matrix MSE(const Matrix& output, const Matrix& target) {
 template <typename Activation>
 class Layer {
 private:
+    static constexpr float b1{ 0.9f };
+    static constexpr float b2{ 0.999f };
+
     int m_numInputs;
     int m_numOutputs;
 
@@ -44,12 +47,38 @@ private:
     Matrix m_weights;
     Matrix m_bias;
 
+    Matrix m_momentumW;
+    Matrix m_varianceW;
+    Matrix m_momentumB;
+    Matrix m_varianceB;
+
+    float m_powb1{ 1.f };
+    float m_powb2{ 1.f };
+
+    void adamUpdate(Matrix& W, const Matrix& dW, Matrix& m, Matrix& v, float lr, float b1, float b2, float bc1, float bc2, float eps) {
+        for (int i{ 0 }; i < W.numRows() * W.numCols(); i++) {
+            float g{ dW.data()[i] };
+            m.data()[i] = (b1 * m.data()[i]) + ((1.f - b1) * g);
+            v.data()[i] = (b2 * v.data()[i]) + ((1.f - b2) * g * g);
+
+            float mHat{ m.data()[i] / bc1 };
+            float vHat{ v.data()[i] / bc2 };
+
+            W.data()[i] -= lr * mHat / (std::sqrt(vHat) + eps);
+        }
+    }
+
 public:
     Layer(int numInputs, int numOutputs) :
         m_numInputs(numInputs),
         m_numOutputs(numOutputs),
         m_weights(numInputs, numOutputs),
-        m_bias(1, numOutputs) { // going to need broadcast add
+        m_bias(1, numOutputs), // going to need broadcast add
+        m_momentumW(numInputs, numOutputs),
+        m_varianceW(numInputs, numOutputs),
+        m_momentumB(1, numOutputs),
+        m_varianceB(1, numOutputs)
+    {
         m_weights.randomInit();
     }
 
@@ -63,6 +92,8 @@ public:
     }
 
     Matrix backward(const Matrix& error, float lr) {
+        static constexpr float eps{ 1e-8f };
+
         Matrix delta{ m_lastPreActivation };
         delta.map(Activation::derivative);
         delta.hadamard(error);
@@ -72,8 +103,15 @@ public:
 
         Matrix inputError{ delta * m_weights.transpose() };
 
-        m_weights = m_weights + (dW * (-lr));
-        m_bias = m_bias + (dB * (-lr));
+        m_powb1 *= b1;
+        m_powb2 *= b2;
+
+        float bc1{ 1.0f - m_powb1 };
+        float bc2{ 1.0f - m_powb2 };
+
+        adamUpdate(m_weights, dW, m_momentumW, m_varianceW, lr, b1, b2, bc1, bc2, eps);
+        adamUpdate(m_bias, dB, m_momentumB, m_varianceB, lr, b1, b2, bc1, bc2, eps);
+
         return inputError;
     }
 

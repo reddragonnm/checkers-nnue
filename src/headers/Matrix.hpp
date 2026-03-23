@@ -15,6 +15,14 @@ public:
 
     Matrix(int rows, int cols) : m_rows(rows), m_cols(cols), m_data(cols* rows, 0.f) {}
 
+    float* data() {
+        return m_data.data();
+    }
+
+    const float* data() const {
+        return m_data.data();
+    }
+
     int numRows() const {
         return m_rows;
     }
