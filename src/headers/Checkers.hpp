@@ -304,6 +304,7 @@ public:
 
     bool makeMove(int moveIdx) {
         // TODO: make this cleaner
+        assert(moveIdx >= 0 && moveIdx < m_moveCounter);
 
         m_history.emplace_back(m_darkPieces, m_lightPieces, m_kingPieces, m_moves, m_moveCounter,
             m_drawCounter, m_darkTurn, m_midCapture, m_hash);
@@ -518,5 +519,15 @@ public:
 
     bool isMidCapture() const {
         return m_midCapture;
+    }
+
+    static std::uint64_t flipBoard(std::uint64_t board) {
+        // flip board for light pieces to reuse dark move generation
+        std::uint64_t flipped{ 0 };
+        for (int i{ 0 }; i < 64; i++) {
+            if ((board >> i) & 1)
+                flipped |= (1ULL << (63 - i));
+        }
+        return flipped;
     }
 };

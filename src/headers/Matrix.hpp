@@ -3,6 +3,8 @@
 #include <vector>
 #include <cassert>
 #include <random>
+#include <fstream>
+#include <stdexcept>
 
 class Matrix {
 private:
@@ -132,5 +134,28 @@ public:
         }
 
         return result;
-    };
+    }
+
+    void save(std::ofstream& out) const {
+        if (!out.is_open()) throw std::runtime_error("Matrix save error");
+
+        out.write(reinterpret_cast<const char*>(&m_rows), sizeof(m_rows));
+        out.write(reinterpret_cast<const char*>(&m_cols), sizeof(m_cols));
+
+        out.write(reinterpret_cast<const char*>(m_data.data()), m_data.size() * sizeof(float));
+    }
+
+    void load(std::ifstream& in) {
+        if (!in.is_open()) throw std::runtime_error("Matrix load error");
+
+        int rows, cols;
+        in.read(reinterpret_cast<char*>(&rows), sizeof(rows));
+        in.read(reinterpret_cast<char*>(&cols), sizeof(cols));
+
+        m_rows = rows;
+        m_cols = cols;
+        m_data.assign(m_rows * m_cols, 0.0f);
+
+        in.read(reinterpret_cast<char*>(m_data.data()), m_data.size() * sizeof(float));
+    }
 };

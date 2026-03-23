@@ -1,6 +1,9 @@
 #pragma once
 
 #include <vector>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 #include "Matrix.hpp"
 
@@ -24,7 +27,7 @@ struct Linear {
     }
 };
 
-inline Matrix MSE(const Matrix& output, const Matrix& target) {
+inline Matrix mseDiff(const Matrix& output, const Matrix& target) {
     assert(output.numCols() == target.numCols() && output.numRows() == target.numRows());
 
     Matrix diff{ output + (target * -1.f) };
@@ -122,6 +125,35 @@ public:
     const Matrix& getBias() const {
         return m_bias;
     }
+
+    void save(std::ofstream& out) const {
+        m_weights.save(out);
+        m_bias.save(out);
+
+        m_momentumW.save(out);
+        m_varianceW.save(out);
+        m_momentumB.save(out);
+        m_varianceB.save(out);
+
+        out.write(reinterpret_cast<const char*>(&m_powb1), sizeof(float));
+        out.write(reinterpret_cast<const char*>(&m_powb2), sizeof(float));
+    }
+
+    void load(std::ifstream& in) {
+        m_weights.load(in);
+        m_bias.load(in);
+
+        m_momentumW.load(in);
+        m_varianceW.load(in);
+        m_momentumB.load(in);
+        m_varianceB.load(in);
+
+        in.read(reinterpret_cast<char*>(&m_powb1), sizeof(float));
+        in.read(reinterpret_cast<char*>(&m_powb2), sizeof(float));
+
+        m_numInputs = m_weights.numRows();
+        m_numOutputs = m_weights.numCols();
+    }
 };
 
 class NNUE {
@@ -131,6 +163,8 @@ private:
     Layer<Linear> m_outputLayer;
 
 public:
+    int trainGames{ 0 };
+
     NNUE(std::vector<int> layerSizes) : m_accumulator(layerSizes[0], layerSizes[1]), m_outputLayer(layerSizes[layerSizes.size() - 2], layerSizes.back()) {
         for (int i{ 2 }; i < layerSizes.size() - 1; i++) {
             m_hiddenLayers.emplace_back(layerSizes[i - 1], layerSizes[i]);
@@ -163,5 +197,55 @@ public:
 
     const Layer<Linear>& getOutputLayer() const {
         return m_outputLayer;
+    }
+
+    void save(const std::string& filename) const {
+        fs::path filepath(filename);
+        if (filepath.has_parent_path()) {
+            fs::create_directories(filepath.parent_path());
+        }
+
+        std::ofstream out(filename, std::ios::binary);
+        if (!out) throw std::runtime_error("Failed to open file for saving: " + filename);
+
+        out.write(reinterpret_cast<const char*>(&trainGames), sizeof(int));
+
+        m_accumulator.save(out);
+
+        int numHidden{ m_hiddenLayers.size() };
+        out.write(reinterpret_cast<const char*>(&numHidden), sizeof(int));
+        for (const auto& layer : m_hiddenLayers) {
+            layer.save(out);
+        }
+
+        m_outputLayer.save(out);
+
+        out.close();
+        std::cout << "Checkpoint saved: " << filename << std::endl;
+    }
+
+    void load(const std::string& filename) {
+        std::ifstream in(filename, std::ios::binary);
+        if (!in) throw std::runtime_error("Failed to open file for loading: " + filename);
+
+        in.read(reinterpret_cast<char*>(&trainGames), sizeof(int));
+
+        m_accumulator.load(in);
+
+        int numHidden;
+        in.read(reinterpret_cast<char*>(&numHidden), sizeof(int));
+
+        if (numHidden != m_hiddenLayers.size()) {
+            throw std::runtime_error("Checkpoint layer count mismatch!");
+        }
+
+        for (auto& layer : m_hiddenLayers) {
+            layer.load(in);
+        }
+
+        m_outputLayer.load(in);
+
+        in.close();
+        std::cout << "Checkpoint loaded: " << filename << " (Step: " << trainGames << ")" << std::endl;
     }
 };

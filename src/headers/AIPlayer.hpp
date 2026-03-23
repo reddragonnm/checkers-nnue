@@ -10,7 +10,7 @@
 #include "EGTB.hpp"
 #include "NNUEInference.hpp"
 
-constexpr int infinity{ 200 };
+constexpr int infinity{ 300 };
 constexpr int infinityThreshold{ 50 };
 constexpr int searchAborted{ std::numeric_limits<int>::min() / 2 };
 
@@ -51,16 +51,6 @@ private:
         return m_stopSearch;
     }
 
-    std::uint64_t flipBoard(std::uint64_t board) const {
-        // flip board for light pieces to reuse dark move generation
-        std::uint64_t flipped{ 0 };
-        for (int i{ 0 }; i < 64; i++) {
-            if ((board >> i) & 1)
-                flipped |= (1ULL << (63 - i));
-        }
-        return flipped;
-    }
-
     int evaluate(Checkers& board) {
         // int dark{ std::popcount(board.getDarkPieces()) +
         //          std::popcount(board.getDarkPieces() & board.getKingPieces()) };
@@ -74,10 +64,10 @@ private:
             features = NNUEInference::encodeBoard(board.getDarkPieces(), board.getLightPieces(), board.getKingPieces());
         }
         else {
-            features = NNUEInference::encodeBoard(flipBoard(board.getLightPieces()), flipBoard(board.getDarkPieces()), flipBoard(board.getKingPieces()));
+            features = NNUEInference::encodeBoard(Checkers::flipBoard(board.getLightPieces()), Checkers::flipBoard(board.getDarkPieces()), Checkers::flipBoard(board.getKingPieces()));
         }
         float output{ m_nnue.forward(features) };
-        return static_cast<int>(std::clamp(output * 100, -200.f, 200.f));
+        return std::clamp(static_cast<int>(output * infinity), -infinity + infinityThreshold, infinity - infinityThreshold);
     }
 
     int quiscence(int alpha, int beta, Checkers& board, int ply) {
