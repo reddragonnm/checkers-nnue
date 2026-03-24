@@ -29,7 +29,7 @@ int main() {
     int draws{ 0 };
 
     auto v1Player{ v1::AIPlayer(board, egtb, nnueInferenceV1) };
-    auto v2Player{ v2::AIPlayer(board, egtb, nnueInferenceV2) }; // piece eval
+    auto v2Player{ v2::AIPlayer(board, egtb, nnueInferenceV2) }; // using egtb
 
     for (int i{ 0 }; i < 1000; i++) {
         bool v1IsDark{ i % 2 == 0 };

@@ -14,7 +14,7 @@ int main() {
     int maxDepth{ 20 };
 
     EGTB egtb;
-    egtb.buildOrLoad("egtb.bin");
+    // egtb.buildOrLoad("egtb.bin");
 
     NNUE nnue{ {128, 256, 32, 1} }; nnue.load("nnue_best.bin");
     NNUEInference nnueInference{ nnue };
