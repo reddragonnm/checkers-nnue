@@ -127,15 +127,18 @@ int main() {
     EGTB egtb;
     egtb.buildOrLoad("egtb.bin");
 
-    NNUE nnueV2{ {128, 256, 32, 1} }; nnueV2.load("checkpoints/nnue_4000.bin");
+    NNUE nnueV1{ {128, 256, 32, 1} }; nnueV1.load("checkpoints/nnue_v1.bin");
+    NNUEInference nnueInferenceV1{ nnueV1 };
+
+    NNUE nnueV2{ {128, 256, 32, 1} }; nnueV2.load("checkpoints/nnue_v1.bin");
     NNUEInference nnueInferenceV2{ nnueV2 };
 
     int v1Wins{ 0 };
     int v2Wins{ 0 };
     int draws{ 0 };
 
-    auto v1Player{ v1::AIPlayer(board, egtb) };
-    auto v2Player{ v2::AIPlayer(board, egtb, nnueInferenceV2) };
+    auto v1Player{ v1::AIPlayer(board, egtb, nnueInferenceV1) };
+    auto v2Player{ v2::AIPlayer(board, egtb, nnueInferenceV2) }; // piece eval
 
 
     for (int i{ 0 }; i < 1000; i++) {

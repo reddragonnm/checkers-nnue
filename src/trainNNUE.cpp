@@ -13,14 +13,11 @@ constexpr int warmupSize{ 20000 };
 constexpr int batchSize{ 256 };
 constexpr int trainStepsPerGame{ 32 };
 
-constexpr int warmupSearchDepth{ 4 };
 constexpr int trainSearchDepth{ 6 };
 
 constexpr float exploreRate{ 0.15f };
 
-constexpr float lrInitial{ 0.001f };
-constexpr int lrDecayEvery{ 10000 };
-constexpr float lrDecayFactor{ 0.9f };
+constexpr float lr{ 0.001f };
 
 constexpr int checkpointEvery{ 1000 };
 constexpr int saveLatestEvery{ 100 };
@@ -181,7 +178,6 @@ int main() {
     Checkers board{};
     AIPlayer ai{ board, egtb, nnueInference };
 
-    float lr{ lrInitial };
     Buffer buffer{}; // dark perspective only
 
     // warmup
@@ -259,11 +255,6 @@ int main() {
         std::cout << "Training " << nnue.trainGames << " complete. Avg MSE: " << avgMSE << "\n";
 
         // periodic stuff
-        if (nnue.trainGames != 0 && nnue.trainGames % lrDecayEvery == 0) {
-            lr *= lrDecayFactor;
-            std::cout << "Step " << nnue.trainGames << ", LR decayed to " << lr << "\n";
-        }
-
         if (nnue.trainGames % saveLatestEvery == 0) {
             nnue.save("checkpoints/nnue_latest.bin");
         }
