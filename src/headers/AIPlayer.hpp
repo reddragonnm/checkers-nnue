@@ -220,8 +220,9 @@ private:
                 break;
 
             int move = entry.move;
-            if (move >= m_board.getNumMoves())
-                break;
+            if (move >= m_board.getNumMoves()) {
+                move = 0; // rare TT move corruption, just return some valid move
+            }
 
             pv.push_back(move);
             movesMade++;

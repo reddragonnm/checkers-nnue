@@ -16,7 +16,7 @@ int main() {
     EGTB egtb;
     egtb.buildOrLoad("egtb.bin");
 
-    NNUE nnue{ {128, 256, 32, 1} };
+    NNUE nnue{ {128, 256, 32, 1} }; nnue.load("nnue_best.bin");
     NNUEInference nnueInference{ nnue };
 
     Checkers board{};
