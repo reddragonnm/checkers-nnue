@@ -217,6 +217,18 @@ private:
         auto moves{ board.getMoves() };
         auto numMoves{ board.getNumMoves() };
 
+        int curA{ std::popcount(board.getDarkPieces()) };
+        int curB{ std::popcount(board.getLightPieces()) };
+
+        if (curB == 0) {
+            setTableIndex(a, b, i, WIN);
+            return true;
+        }
+        if (curA == 0) {
+            setTableIndex(a, b, i, LOSS);
+            return true;
+        }
+
         if (numMoves == 0) {
             setTableIndex(a, b, i, LOSS);
             return true;
@@ -247,13 +259,16 @@ private:
                     setTableIndex(a, b, i, WIN);
                     return true;
                 }
+                if (childA == 0) {
+                    allWin = false;
+                    board.undoMove();
+                    continue;
+                }
 
                 if (childA < 0 || childA > 5 || childB < 0 || childB > 5
                     || m_tables[childB][childA].empty()) {
                     std::cerr << "This should not happen\n";
-                    allWin = false;
-                    board.undoMove();
-                    continue;
+                    std::abort();
                 }
 
                 int idx{ getIndexLTM(childB, childA, board) };
@@ -293,6 +308,9 @@ private:
         std::cout << "Building table " << a << "v" << b << " of size " << size << '\n';
 
         m_tables[a][b].resize((size + 3) / 4, 0);
+        if (a != b) {
+            m_tables[b][a].resize((size + 3) / 4, 0);
+        }
 
         bool changed{ true };
         int pass{ 0 };
@@ -301,14 +319,21 @@ private:
             changed = false;
 
             for (int i{ 0 }; i < size; i++) {
-                if (getTableVal(a, b, i) != UNKNOWN)
-                    continue;
+                if (getTableVal(a, b, i) == UNKNOWN) {
+                    Checkers board{ decodeFromIndex(i, a, b) };
+                    assert(getIndex(a, b, board) == i);
 
-                Checkers board{ decodeFromIndex(i, a, b) };
-                assert(getIndex(a, b, board) == i);
+                    if (evaluateBoard(i, a, b, board))
+                        changed = true;
+                }
 
-                if (evaluateBoard(i, a, b, board))
-                    changed = true;
+                if (a != b && getTableVal(b, a, i) == UNKNOWN) {
+                    Checkers board{ decodeFromIndex(i, b, a) };
+                    assert(getIndex(b, a, board) == i);
+
+                    if (evaluateBoard(i, b, a, board))
+                        changed = true;
+                }
             }
 
             if (!changed) {
@@ -316,8 +341,32 @@ private:
                     if (getTableVal(a, b, i) == UNKNOWN) {
                         setTableIndex(a, b, i, DRAW); // mark remaining as draw
                     }
+
+                    if (a != b && getTableVal(b, a, i) == UNKNOWN) {
+                        setTableIndex(b, a, i, DRAW); // mark remaining as draw
+                    }
                 }
             }
+        }
+
+        int win{ 0 }, loss{ 0 }, draw{ 0 };
+        for (int i{ 0 }; i < size; i++) {
+            WDL result{ getTableVal(a, b, i) };
+            if (result == WIN) win++;
+            else if (result == LOSS) loss++;
+            else if (result == DRAW) draw++;
+        }
+        std::cout << "Table " << a << "v" << b << ": " << win << " wins, " << loss << " losses, " << draw << " draws\n";
+
+        if (a != b) {
+            win = 0; loss = 0; draw = 0;
+            for (int i{ 0 }; i < size; i++) {
+                WDL result{ getTableVal(b, a, i) };
+                if (result == WIN) win++;
+                else if (result == LOSS) loss++;
+                else if (result == DRAW) draw++;
+            }
+            std::cout << "Table " << b << "v" << a << ": " << win << " wins, " << loss << " losses, " << draw << " draws\n";
         }
     }
 
@@ -358,13 +407,17 @@ public:
         else {
             std::cout << "Building EGTB...\n";
 
-            build(1, 0); build(0, 1);
+            build(1, 0);
             build(1, 1);
-            build(2, 0); build(0, 2); build(2, 1); build(1, 2);
+            build(2, 0);
+            build(2, 1);
             build(2, 2);
-            build(3, 0); build(0, 3); build(3, 1); build(1, 3); build(3, 2); build(2, 3);
-            build(4, 0); build(0, 4); build(4, 1); build(1, 4);
-            build(5, 0); build(0, 5);
+            build(3, 0);
+            build(3, 1);
+            build(3, 2);
+            build(4, 0);
+            build(4, 1);
+            build(5, 0);
 
             std::ofstream file{ filepath, std::ios::binary };
             if (!file) {
@@ -392,8 +445,8 @@ public:
         int a{ std::popcount(board.getDarkPieces()) };
         int b{ std::popcount(board.getLightPieces()) };
 
-        if (b == 0) return WIN;   // dark won, no light pieces
-        if (a == 0) return LOSS;  // dark lost, no dark pieces
+        if (b == 0) return (board.isDarkTurn() ? WIN : LOSS);   // dark won, no light pieces
+        if (a == 0) return (board.isDarkTurn() ? LOSS : WIN);  // dark lost, no dark pieces
 
         if (a + b > 5)
             return UNKNOWN;
