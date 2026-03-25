@@ -28,7 +28,6 @@ private:
     // maintain a flipped perspective feature set to avoid having to recalculate the whole accumulator when flipping sides
     alignas(64) mutable std::array<float, h1> a1;
     alignas(64) mutable std::array<float, h1> a1Flipped;
-    alignas(64) mutable std::array<float, h2> a2;
 
 public:
     NNUEInference(NNUE& nnue) : m_nnue(nnue) {
@@ -60,7 +59,6 @@ public:
         b3 = b3mat(0, 0);
 
         a1 = b1;
-        a2 = b2;
         a1Flipped = b1;
     }
 
@@ -85,28 +83,20 @@ public:
     }
 
     float forwardAccumulator(bool flipped) const {
-        static float ac1[h1];
+        std::array<float, h1> ac1;
+        for (int j{ 0 }; j < h1; j++)
+            ac1[j] = std::clamp(flipped ? a1Flipped[j] : a1[j], 0.f, 1.f);
 
-        if (flipped) {
-            for (int j{ 0 }; j < h1; j++)
-                ac1[j] = a1Flipped[j] < 0.f ? 0.f : a1Flipped[j] > 1.f ? 1.f : a1Flipped[j];
-        }
-        else {
-            for (int j{ 0 }; j < h1; j++)
-                ac1[j] = a1[j] < 0.f ? 0.f : a1[j] > 1.f ? 1.f : a1[j];
-        }
-
-        a2 = b2;
-
+        auto a2{ b2 };
         for (int i{ 0 }; i < h1; i++) {
             float ai{ ac1[i] };
-            const std::array<float, h2>& row{ W2[i] };
+            const auto& row{ W2[i] };
             for (int j{ 0 }; j < h2; j++)
                 a2[j] += ai * row[j];
         }
 
         for (int j{ 0 }; j < h2; j++)
-            a2[j] = a2[j] < 0.f ? 0.f : a2[j] > 1.f ? 1.f : a2[j];
+            a2[j] = std::clamp(a2[j], 0.f, 1.f);
 
         float out{ b3 };
         for (int i{ 0 }; i < h2; i++)
@@ -130,13 +120,8 @@ public:
     }
 
     void setFeature(int sq32, bool king, bool dark) {
-        int idx{ sq32 * 4 };
-        if (!dark) idx += 2;
-        if (king) idx++;
-
-        int idxFlipped{ (31 - sq32) * 4 };
-        if (dark) idxFlipped += 2;
-        if (king) idxFlipped++;
+        int idx{ sq32 * 4 + ((!dark) * 2) + king };
+        int idxFlipped{ (31 - sq32) * 4 + dark * 2 + king };
 
         for (int j{ 0 }; j < h1; j++) {
             a1[j] += W1[idx][j];
@@ -145,13 +130,8 @@ public:
     }
 
     void unsetFeature(int sq32, bool king, bool dark) {
-        int idx{ sq32 * 4 };
-        if (!dark) idx += 2;
-        if (king) idx++;
-
-        int idxFlipped{ (31 - sq32) * 4 };
-        if (dark) idxFlipped += 2;
-        if (king) idxFlipped++;
+        int idx{ sq32 * 4 + ((!dark) * 2) + king };
+        int idxFlipped{ (31 - sq32) * 4 + dark * 2 + king };
 
         for (int j{ 0 }; j < h1; j++) {
             a1[j] -= W1[idx][j];
