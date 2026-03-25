@@ -464,6 +464,12 @@ public:
                 if ((toSq & 0xff00000000000000) && !wasKing) {
                     m_drawCounter = 0;
                     m_kingPieces |= toSq;
+
+                    if (m_nnue) {
+                        m_nnue->unsetFeature(t / 2, false, true);
+                        m_nnue->setFeature(t / 2, true, true);
+                    }
+
                     m_hash ^= m_zobrist[0][t];
                     m_hash ^= m_zobrist[1][t];
                 }
@@ -483,6 +489,12 @@ public:
                 if ((toSq & 0xff) && !wasKing) {
                     m_drawCounter = 0;
                     m_kingPieces |= toSq;
+
+                    if (m_nnue) {
+                        m_nnue->unsetFeature(t / 2, false, false);
+                        m_nnue->setFeature(t / 2, true, false);
+                    }
+
                     m_hash ^= m_zobrist[2][t];
                     m_hash ^= m_zobrist[3][t];
                 }
