@@ -66,7 +66,7 @@ private:
         else {
             features = NNUEInference::encodeBoard(Checkers::flipBoard(board.getLightPieces()), Checkers::flipBoard(board.getDarkPieces()), Checkers::flipBoard(board.getKingPieces()));
         }
-        float output{ m_nnue.forward(features) };
+        float output{ m_nnue.forward(features, !board.isDarkTurn()) };
         return std::clamp(static_cast<int>(output * infinity), -infinity + infinityThreshold, infinity - infinityThreshold);
     }
 

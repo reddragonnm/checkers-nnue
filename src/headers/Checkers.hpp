@@ -6,6 +6,8 @@
 #include <random>
 #include <cassert>
 
+#include "NNUEInference.hpp"
+
 constexpr int maxMovesSize{ 48 };
 
 constexpr std::uint64_t rt{ 0xfefefefefefefe };
@@ -33,6 +35,8 @@ struct State {
     bool darkTurn;
     bool midCapture;
     std::uint64_t hash;
+
+    std::pair<std::array<float, h1>, std::array<float, h1>> accumulatorState;
 };
 
 class Checkers {
@@ -59,6 +63,8 @@ private:
     std::uint64_t m_oppPieces;
 
     std::vector<State> m_history;
+
+    NNUEInference* m_nnue{ nullptr };
 
     void initZobrist() {
         std::mt19937_64 rng(42);
@@ -244,7 +250,7 @@ private:
     }
 
 public:
-    Checkers() {
+    Checkers(NNUEInference* nnue = nullptr) : m_nnue(nnue) {
         // initialise board
         m_darkPieces = 0xaa55aa;
         m_lightPieces = static_cast<std::uint64_t>(0x55aa55) << 40;
@@ -254,12 +260,16 @@ public:
         generateMoves();
 
         m_history.reserve(256);
+
+        if (m_nnue)
+            m_nnue->initialise(m_darkPieces, m_lightPieces, m_kingPieces);
     }
 
     Checkers(std::uint64_t dark, std::uint64_t light, std::uint64_t king, bool darkTurn) : m_darkPieces(dark),
         m_lightPieces(light),
         m_kingPieces(king),
-        m_darkTurn(darkTurn) {
+        m_darkTurn(darkTurn),
+        m_nnue(nullptr) {
         initZobrist();
         m_hash = computeHash();
         generateMoves();
@@ -293,6 +303,8 @@ public:
         m_darkTurn = state.darkTurn;
         m_midCapture = state.midCapture;
         m_hash = state.hash;
+        if (m_nnue)
+            m_nnue->setAccumulatorState(state.accumulatorState.first, state.accumulatorState.second);
     }
 
     void undoMove() {
@@ -307,7 +319,7 @@ public:
         assert(moveIdx >= 0 && moveIdx < m_moveCounter);
 
         m_history.emplace_back(m_darkPieces, m_lightPieces, m_kingPieces, m_moves, m_moveCounter,
-            m_drawCounter, m_darkTurn, m_midCapture, m_hash);
+            m_drawCounter, m_darkTurn, m_midCapture, m_hash, m_nnue ? m_nnue->getAccumulatorState() : std::pair<std::array<float, h1>, std::array<float, h1>>{});
 
         if (m_midCapture) {
             m_midCapture = false;
@@ -338,6 +350,12 @@ public:
 
                 m_lightPieces &= ~midSq; // remove captured piece
 
+                if (m_nnue) {
+                    m_nnue->unsetFeature(f / 2, wasKing, true);
+                    m_nnue->setFeature(t / 2, wasKing, true);
+                    m_nnue->unsetFeature(m / 2, static_cast<bool>(midSq & m_kingPieces), false);
+                }
+
                 m_hash ^= wasKing ? m_zobrist[1][f] : m_zobrist[0][f];
                 m_hash ^= wasKing ? m_zobrist[1][t] : m_zobrist[0][t];
                 m_hash ^= (midSq & m_kingPieces) ? m_zobrist[3][m] : m_zobrist[2][m];
@@ -350,6 +368,11 @@ public:
 
                     m_kingPieces |= toSq;
                     m_kingPieces &= ~midSq;
+
+                    if (m_nnue) {
+                        m_nnue->unsetFeature(t / 2, false, true);
+                        m_nnue->setFeature(t / 2, true, true);
+                    }
 
                     m_darkTurn = !m_darkTurn;
                     m_hash ^= m_zobristSide;
@@ -369,6 +392,12 @@ public:
 
                 m_darkPieces &= ~midSq;
 
+                if (m_nnue) {
+                    m_nnue->unsetFeature(f / 2, wasKing, false);
+                    m_nnue->setFeature(t / 2, wasKing, false);
+                    m_nnue->unsetFeature(m / 2, static_cast<bool>(midSq & m_kingPieces), true);
+                }
+
                 m_hash ^= wasKing ? m_zobrist[3][f] : m_zobrist[2][f];
                 m_hash ^= wasKing ? m_zobrist[3][t] : m_zobrist[2][t];
                 m_hash ^= (midSq & m_kingPieces) ? m_zobrist[1][m] : m_zobrist[0][m];
@@ -379,6 +408,11 @@ public:
 
                     m_kingPieces |= toSq;
                     m_kingPieces &= ~midSq;
+
+                    if (m_nnue) {
+                        m_nnue->unsetFeature(t / 2, false, false);
+                        m_nnue->setFeature(t / 2, true, false);
+                    }
 
                     m_darkTurn = !m_darkTurn;
                     m_hash ^= m_zobristSide;
@@ -392,7 +426,7 @@ public:
             }
 
             m_kingPieces &= ~midSq;
-            if (m_kingPieces & frSq) {
+            if (wasKing) {
                 m_kingPieces &= ~frSq;
                 m_kingPieces |= toSq;
 
@@ -419,6 +453,11 @@ public:
                 m_darkPieces &= ~frSq;
                 m_darkPieces |= toSq;
 
+                if (m_nnue) {
+                    m_nnue->unsetFeature(f / 2, wasKing, true);
+                    m_nnue->setFeature(t / 2, wasKing, true);
+                }
+
                 m_hash ^= wasKing ? m_zobrist[1][f] : m_zobrist[0][f];
                 m_hash ^= wasKing ? m_zobrist[1][t] : m_zobrist[0][t];
 
@@ -433,6 +472,11 @@ public:
                 m_lightPieces &= ~frSq;
                 m_lightPieces |= toSq;
 
+                if (m_nnue) {
+                    m_nnue->unsetFeature(f / 2, wasKing, false);
+                    m_nnue->setFeature(t / 2, wasKing, false);
+                }
+
                 m_hash ^= wasKing ? m_zobrist[3][f] : m_zobrist[2][f];
                 m_hash ^= wasKing ? m_zobrist[3][t] : m_zobrist[2][t];
 
@@ -444,7 +488,7 @@ public:
                 }
             }
 
-            if (m_kingPieces & frSq) {
+            if (wasKing) {
                 m_kingPieces &= ~frSq;
                 m_kingPieces |= toSq;
             }

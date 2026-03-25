@@ -136,7 +136,7 @@ int main() {
     NNUE nnue{ {128, 256, 32, 1} }; nnue.load("nnue_best.bin");
     NNUEInference nnueInference{ nnue };
 
-    Checkers board{};
+    Checkers board{ &nnueInference };
     AIPlayer ai{ board, egtb, nnueInference };
 
     bool gameOver{ false };

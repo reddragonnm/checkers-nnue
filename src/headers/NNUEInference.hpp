@@ -2,6 +2,7 @@
 
 #include <bitset>
 #include <cstring>
+#include <array>
 
 #include "NNUE.hpp"
 #include "Matrix.hpp"
@@ -13,17 +14,21 @@ class NNUEInference {
 private:
     NNUE& m_nnue;
 
-    alignas(64) float W1[128][h1];
-    alignas(64) float b1[h1];
+    alignas(64) std::array<std::array<float, h1>, 128> W1;
+    alignas(64) std::array<float, h1> b1;
 
-    alignas(64) float W2[h1][h2];
-    alignas(64) float b2[h2];
+    alignas(64) std::array<std::array<float, h2>, h1> W2;
+    alignas(64) std::array<float, h2> b2;
 
-    alignas(64) float W3[h2];
-    alignas(64) float b3;
+    alignas(64) std::array<float, h2> W3;
+    float b3;
 
-    alignas(64) mutable float a1[h1];
-    alignas(64) mutable float a2[h2];
+    alignas(64) mutable std::array<float, h1> a1;
+    // alignas(64) mutable std::array<float, h1> a1Flipped;
+    alignas(64) mutable std::array<float, h2> a2;
+
+    alignas(64) mutable std::array<float, h1> a1Test;
+    alignas(64) mutable std::array<float, h1> a1FlippedTest;
 
 public:
     NNUEInference(NNUE& nnue) : m_nnue(nnue) {
@@ -53,6 +58,12 @@ public:
         for (int i{ 0 }; i < h2; i++)
             W3[i] = W3mat(i, 0);
         b3 = b3mat(0, 0);
+
+        a1 = b1;
+        a2 = b2;
+
+        a1Test = b1;
+        a1FlippedTest = b1;
     }
 
     static std::bitset<128> encodeBoard(std::uint64_t darkPieces, std::uint64_t lightPieces, std::uint64_t kingPieces) {
@@ -75,8 +86,8 @@ public:
         return features;
     }
 
-    float forward(const std::bitset<128>& input) const {
-        std::memcpy(a1, b1, h1 * sizeof(float));
+    float forward(const std::bitset<128>& input, bool flipped) const {
+        a1 = b1;
 
         int setIndices[128];
         int numSet{ 0 };
@@ -84,19 +95,46 @@ public:
             if (input[i]) setIndices[numSet++] = i;
 
         for (int s{ 0 }; s < numSet; s++) {
-            const float* row{ W1[setIndices[s]] };
+            const std::array<float, h1>& row{ W1[setIndices[s]] };
             for (int j{ 0 }; j < h1; j++)
                 a1[j] += row[j];
         }
 
-        for (int j{ 0 }; j < h1; j++)
-            a1[j] = a1[j] < 0.f ? 0.f : a1[j] > 1.f ? 1.f : a1[j];
+        // assert a1 == a1Test
+        if (flipped) {
+            for (int j{ 0 }; j < h1; j++) {
+                float expected{ a1FlippedTest[j] };
+                float actual{ a1[j] };
+                if (std::abs(expected - actual) > 0.1f) {
+                    std::cerr << "Mismatch at index " << j << ": expected " << expected << ", got " << actual << std::endl;
+                    assert(false);
+                }
+            }
+        }
+        else {
+            for (int j{ 0 }; j < h1; j++) {
+                float expected{ a1Test[j] };
+                float actual{ a1[j] };
+                if (std::abs(expected - actual) > 0.1f) {
+                    std::cerr << "Mismatch at index " << j << ": expected " << expected << ", got " << actual << std::endl;
+                    assert(false);
+                }
+            }
+        }
 
-        std::memcpy(a2, b2, h2 * sizeof(float));
+        return forwardAccumulator();
+    }
+
+    float forwardAccumulator() const {
+        static float ac1[h1];
+        for (int j{ 0 }; j < h1; j++)
+            ac1[j] = a1[j] < 0.f ? 0.f : a1[j] > 1.f ? 1.f : a1[j];
+
+        a2 = b2;
 
         for (int i{ 0 }; i < h1; i++) {
-            float ai{ a1[i] };
-            const float* row{ W2[i] };
+            float ai{ ac1[i] };
+            const std::array<float, h2>& row{ W2[i] };
             for (int j{ 0 }; j < h2; j++)
                 a2[j] += ai * row[j];
         }
@@ -108,5 +146,58 @@ public:
         for (int i{ 0 }; i < h2; i++)
             out += a2[i] * W3[i];
         return out;
+    }
+
+    void initialise(std::uint64_t darkPieces, std::uint64_t lightPieces, std::uint64_t kingPieces) {
+        for (int i{ 0 }; i < 64; i++) {
+            std::uint64_t mask{ static_cast<std::uint64_t>(1) << i };
+
+            if (!(mask & (darkPieces | lightPieces)))
+                continue;
+
+            setFeature(i / 2, static_cast<bool>(mask & kingPieces), static_cast<bool>(mask & darkPieces));
+        }
+
+    }
+
+    void setFeature(int sq32, bool king, bool dark) {
+        // maintain a flipped perspective feature set to avoid having to recalculate the whole accumulator when flipping sides
+
+        int idx{ sq32 * 4 };
+        if (!dark) idx += 2;
+        if (king) idx++;
+
+        int idxFlipped{ (31 - sq32) * 4 };
+        if (dark) idxFlipped += 2;
+        if (king) idxFlipped++;
+
+        for (int j{ 0 }; j < h1; j++) {
+            a1Test[j] += W1[idx][j];
+            a1FlippedTest[j] += W1[idxFlipped][j];
+        }
+    }
+
+    void unsetFeature(int sq32, bool king, bool dark) {
+        int idx{ sq32 * 4 };
+        if (!dark) idx += 2;
+        if (king) idx++;
+
+        int idxFlipped{ (31 - sq32) * 4 };
+        if (dark) idxFlipped += 2;
+        if (king) idxFlipped++;
+
+        for (int j{ 0 }; j < h1; j++) {
+            a1Test[j] -= W1[idx][j];
+            a1FlippedTest[j] -= W1[idxFlipped][j];
+        }
+    }
+
+    std::pair<std::array<float, h1>, std::array<float, h1>> getAccumulatorState() const {
+        return { a1Test, a1FlippedTest };
+    }
+
+    void setAccumulatorState(const std::array<float, h1>& acc, const std::array<float, h1>& accFlipped) {
+        a1Test = acc;
+        a1FlippedTest = accFlipped;
     }
 };
