@@ -23,12 +23,10 @@ private:
     alignas(64) std::array<float, h2> W3;
     float b3;
 
+    // maintain a flipped perspective feature set to avoid having to recalculate the whole accumulator when flipping sides
     alignas(64) mutable std::array<float, h1> a1;
-    // alignas(64) mutable std::array<float, h1> a1Flipped;
+    alignas(64) mutable std::array<float, h1> a1Flipped;
     alignas(64) mutable std::array<float, h2> a2;
-
-    alignas(64) mutable std::array<float, h1> a1Test;
-    alignas(64) mutable std::array<float, h1> a1FlippedTest;
 
 public:
     NNUEInference(NNUE& nnue) : m_nnue(nnue) {
@@ -61,74 +59,20 @@ public:
 
         a1 = b1;
         a2 = b2;
-
-        a1Test = b1;
-        a1FlippedTest = b1;
+        a1Flipped = b1;
     }
 
-    static std::bitset<128> encodeBoard(std::uint64_t darkPieces, std::uint64_t lightPieces, std::uint64_t kingPieces) {
-        // even index bits are playable
-        std::bitset<128> features;
+    float forwardAccumulator(bool flipped) const {
+        static float ac1[h1];
 
-        for (int i{ 0 }; i < 64; i++) {
-            std::uint64_t mask{ static_cast<std::uint64_t>(1) << i };
-
-            if (!(mask & (darkPieces | lightPieces)))
-                continue;
-
-            int idx{ (i / 2) * 4 };
-
-            if (mask & lightPieces) idx += 2;
-            if (mask & kingPieces) idx++;
-            features[idx] = 1;
-        }
-
-        return features;
-    }
-
-    float forward(const std::bitset<128>& input, bool flipped) const {
-        a1 = b1;
-
-        int setIndices[128];
-        int numSet{ 0 };
-        for (int i{ 0 }; i < 128; i++)
-            if (input[i]) setIndices[numSet++] = i;
-
-        for (int s{ 0 }; s < numSet; s++) {
-            const std::array<float, h1>& row{ W1[setIndices[s]] };
-            for (int j{ 0 }; j < h1; j++)
-                a1[j] += row[j];
-        }
-
-        // assert a1 == a1Test
         if (flipped) {
-            for (int j{ 0 }; j < h1; j++) {
-                float expected{ a1FlippedTest[j] };
-                float actual{ a1[j] };
-                if (std::abs(expected - actual) > 0.1f) {
-                    std::cerr << "Mismatch at index " << j << ": expected " << expected << ", got " << actual << std::endl;
-                    assert(false);
-                }
-            }
+            for (int j{ 0 }; j < h1; j++)
+                ac1[j] = a1Flipped[j] < 0.f ? 0.f : a1Flipped[j] > 1.f ? 1.f : a1Flipped[j];
         }
         else {
-            for (int j{ 0 }; j < h1; j++) {
-                float expected{ a1Test[j] };
-                float actual{ a1[j] };
-                if (std::abs(expected - actual) > 0.1f) {
-                    std::cerr << "Mismatch at index " << j << ": expected " << expected << ", got " << actual << std::endl;
-                    assert(false);
-                }
-            }
+            for (int j{ 0 }; j < h1; j++)
+                ac1[j] = a1[j] < 0.f ? 0.f : a1[j] > 1.f ? 1.f : a1[j];
         }
-
-        return forwardAccumulator();
-    }
-
-    float forwardAccumulator() const {
-        static float ac1[h1];
-        for (int j{ 0 }; j < h1; j++)
-            ac1[j] = a1[j] < 0.f ? 0.f : a1[j] > 1.f ? 1.f : a1[j];
 
         a2 = b2;
 
@@ -149,6 +93,9 @@ public:
     }
 
     void initialise(std::uint64_t darkPieces, std::uint64_t lightPieces, std::uint64_t kingPieces) {
+        a1 = b1;
+        a1Flipped = b1;
+
         for (int i{ 0 }; i < 64; i++) {
             std::uint64_t mask{ static_cast<std::uint64_t>(1) << i };
 
@@ -161,8 +108,6 @@ public:
     }
 
     void setFeature(int sq32, bool king, bool dark) {
-        // maintain a flipped perspective feature set to avoid having to recalculate the whole accumulator when flipping sides
-
         int idx{ sq32 * 4 };
         if (!dark) idx += 2;
         if (king) idx++;
@@ -172,8 +117,8 @@ public:
         if (king) idxFlipped++;
 
         for (int j{ 0 }; j < h1; j++) {
-            a1Test[j] += W1[idx][j];
-            a1FlippedTest[j] += W1[idxFlipped][j];
+            a1[j] += W1[idx][j];
+            a1Flipped[j] += W1[idxFlipped][j];
         }
     }
 
@@ -187,17 +132,17 @@ public:
         if (king) idxFlipped++;
 
         for (int j{ 0 }; j < h1; j++) {
-            a1Test[j] -= W1[idx][j];
-            a1FlippedTest[j] -= W1[idxFlipped][j];
+            a1[j] -= W1[idx][j];
+            a1Flipped[j] -= W1[idxFlipped][j];
         }
     }
 
     std::pair<std::array<float, h1>, std::array<float, h1>> getAccumulatorState() const {
-        return { a1Test, a1FlippedTest };
+        return { a1, a1Flipped };
     }
 
     void setAccumulatorState(const std::array<float, h1>& acc, const std::array<float, h1>& accFlipped) {
-        a1Test = acc;
-        a1FlippedTest = accFlipped;
+        a1 = acc;
+        a1Flipped = accFlipped;
     }
 };

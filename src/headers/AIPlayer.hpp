@@ -59,14 +59,7 @@ private:
 
         // return board.isDarkTurn() ? (dark - light) : (light - dark);
 
-        std::bitset<128> features;
-        if (board.isDarkTurn()) {
-            features = NNUEInference::encodeBoard(board.getDarkPieces(), board.getLightPieces(), board.getKingPieces());
-        }
-        else {
-            features = NNUEInference::encodeBoard(Checkers::flipBoard(board.getLightPieces()), Checkers::flipBoard(board.getDarkPieces()), Checkers::flipBoard(board.getKingPieces()));
-        }
-        float output{ m_nnue.forward(features, !board.isDarkTurn()) };
+        float output{ m_nnue.forwardAccumulator(!board.isDarkTurn()) };
         return std::clamp(static_cast<int>(output * infinity), -infinity + infinityThreshold, infinity - infinityThreshold);
     }
 

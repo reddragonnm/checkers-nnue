@@ -286,6 +286,9 @@ public:
         m_darkTurn = true;
         m_midCapture = false;
 
+        if (m_nnue)
+            m_nnue->initialise(m_darkPieces, m_lightPieces, m_kingPieces);
+
         m_hash = computeHash();
         generateMoves();
 

@@ -13,67 +13,6 @@
 #include "matchmaking/v1.hpp"
 #include "matchmaking/v2.hpp"
 
-// int main() {
-//     Checkers board{};
-//     EGTB egtb;
-//     egtb.buildOrLoad("egtb.bin");
-
-//     NNUE nnueV1{ {128, 256, 32, 1} }; nnueV1.load("nnue_best.bin");
-//     NNUEInference nnueInferenceV1{ nnueV1 };
-
-//     NNUE nnueV2{ {128, 256, 32, 1} }; nnueV2.load("nnue_best.bin");
-//     NNUEInference nnueInferenceV2{ nnueV2 };
-
-//     int v1Wins{ 0 };
-//     int v2Wins{ 0 };
-//     int draws{ 0 };
-
-//     auto v1Player{ v1::AIPlayer(board, egtb, nnueInferenceV1) };
-//     auto v2Player{ v2::AIPlayer(board, egtb, nnueInferenceV2) }; // piece eval
-
-//     for (int i{ 0 }; i < 1000; i++) {
-//         bool v1IsDark{ i % 2 == 0 };
-//         int numMoves{ 0 };
-
-//         while (true) {
-//             int score;
-//             std::vector<int> moves;
-//             bool isV1Turn = (board.isDarkTurn() == v1IsDark);
-
-//             if (isV1Turn)
-//                 std::tie(score, moves) = v1Player.search(100, false);
-//             else
-//                 std::tie(score, moves) = v2Player.search(100, false);
-
-//             if (moves.empty()) {
-//                 if (isV1Turn) v2Wins++;
-//                 else v1Wins++;
-//                 break;
-//             }
-
-//             for (int m : moves) board.makeMove(m);
-
-//             if ((board.isDarkTurn() == v1IsDark) == isV1Turn) {
-//                 std::cerr << "Error: Wrong player moved!\n";
-//                 return 1;
-//             }
-
-//             if (board.isDraw()) {
-//                 draws++;
-//                 break;
-//             }
-
-//             numMoves++;
-//             std::cout << "Game " << i + 1 << ": Move " << numMoves << "\n";
-//         }
-
-//         std::cout << "Game " << i + 1 << ": V1 Wins: " << v1Wins << " V2 Wins: " << v2Wins << " Draws: " << draws << "\n";
-//         board.reset();
-//         v1Player.resetTT();
-//         v2Player.resetTT();
-//     }
-// }
-
 constexpr int squareSize{ 100 };
 
 void displayGrid(sf::RenderWindow& window) {
@@ -135,7 +74,6 @@ int main() {
     constexpr int windowSize{ 8 * squareSize };
     sf::RenderWindow window(sf::VideoMode({ windowSize, windowSize }), "SFML");
 
-    Checkers board{};
     EGTB egtb;
     egtb.buildOrLoad("egtb.bin");
 
@@ -145,12 +83,15 @@ int main() {
     NNUE nnueV2{ {128, 256, 32, 1} }; nnueV2.load("nnue_best.bin");
     NNUEInference nnueInferenceV2{ nnueV2 };
 
+    Checkers board1{ &nnueInferenceV1 };
+    Checkers board2{ &nnueInferenceV2 };
+
     int v1Wins{ 0 };
     int v2Wins{ 0 };
     int draws{ 0 };
 
-    auto v1Player{ v1::AIPlayer(board, egtb, nnueInferenceV1) };
-    auto v2Player{ v2::AIPlayer(board, egtb, nnueInferenceV2) }; // piece eval
+    auto v1Player{ v1::AIPlayer(board1, egtb, nnueInferenceV1) };
+    auto v2Player{ v2::AIPlayer(board2, egtb, nnueInferenceV2) }; // piece eval
 
 
     for (int i{ 0 }; i < 1000; i++) {
@@ -168,7 +109,7 @@ int main() {
 
             int score;
             std::vector<int> moves;
-            bool isV1Turn = (board.isDarkTurn() == v1IsDark);
+            bool isV1Turn = (board1.isDarkTurn() == v1IsDark);
 
             if (isV1Turn)
                 std::tie(score, moves) = v1Player.search(100, false);
@@ -181,14 +122,15 @@ int main() {
                 break;
             }
 
-            for (int m : moves) board.makeMove(m);
+            for (int m : moves) board1.makeMove(m);
+            for (int m : moves) board2.makeMove(m);
 
-            if ((board.isDarkTurn() == v1IsDark) == isV1Turn) {
+            if ((board1.isDarkTurn() == v1IsDark) == isV1Turn) {
                 std::cerr << "Error: Wrong player moved!\n";
                 return 1;
             }
 
-            if (board.isDraw()) {
+            if (board1.isDraw()) {
                 draws++;
                 break;
             }
@@ -196,13 +138,14 @@ int main() {
             numMoves++;
             std::cout << "Game " << i + 1 << ": Move " << numMoves << " Score: " << score << "\n";
 
-            displayBoard(board, window);
+            displayBoard(board1, window);
 
             window.display();
         }
 
         std::cout << "Game " << i + 1 << ": V1 Wins: " << v1Wins << " V2 Wins: " << v2Wins << " Draws: " << draws << "\n";
-        board.reset();
+        board1.reset();
+        board2.reset();
         v1Player.resetTT();
         v2Player.resetTT();
 
