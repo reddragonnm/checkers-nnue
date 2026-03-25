@@ -36,7 +36,7 @@ struct State {
     bool midCapture;
     std::uint64_t hash;
 
-    std::pair<std::array<float, h1>, std::array<float, h1>> accumulatorState;
+    AccumulatorState accumulatorState;
 };
 
 class Checkers {
@@ -307,7 +307,7 @@ public:
         m_midCapture = state.midCapture;
         m_hash = state.hash;
         if (m_nnue)
-            m_nnue->setAccumulatorState(state.accumulatorState.first, state.accumulatorState.second);
+            m_nnue->setAccumulatorState(state.accumulatorState);
     }
 
     void undoMove() {
@@ -322,7 +322,7 @@ public:
         assert(moveIdx >= 0 && moveIdx < m_moveCounter);
 
         m_history.emplace_back(m_darkPieces, m_lightPieces, m_kingPieces, m_moves, m_moveCounter,
-            m_drawCounter, m_darkTurn, m_midCapture, m_hash, m_nnue ? m_nnue->getAccumulatorState() : std::pair<std::array<float, h1>, std::array<float, h1>>{});
+            m_drawCounter, m_darkTurn, m_midCapture, m_hash, m_nnue ? m_nnue->getAccumulatorState() : AccumulatorState{});
 
         if (m_midCapture) {
             m_midCapture = false;

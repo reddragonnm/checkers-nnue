@@ -10,6 +10,8 @@
 constexpr int h1{ 256 };
 constexpr int h2{ 32 };
 
+using AccumulatorState = std::pair<std::array<float, h1>, std::array<float, h1>>;
+
 class NNUEInference {
 private:
     NNUE& m_nnue;
@@ -60,6 +62,26 @@ public:
         a1 = b1;
         a2 = b2;
         a1Flipped = b1;
+    }
+
+    static std::bitset<128> encodeBoard(std::uint64_t darkPieces, std::uint64_t lightPieces, std::uint64_t kingPieces) {
+        // even index bits are playable
+        std::bitset<128> features;
+
+        for (int i{ 0 }; i < 64; i++) {
+            std::uint64_t mask{ static_cast<std::uint64_t>(1) << i };
+
+            if (!(mask & (darkPieces | lightPieces)))
+                continue;
+
+            int idx{ (i / 2) * 4 };
+
+            if (mask & lightPieces) idx += 2;
+            if (mask & kingPieces) idx++;
+            features[idx] = 1;
+        }
+
+        return features;
     }
 
     float forwardAccumulator(bool flipped) const {
@@ -137,12 +159,12 @@ public:
         }
     }
 
-    std::pair<std::array<float, h1>, std::array<float, h1>> getAccumulatorState() const {
+    AccumulatorState getAccumulatorState() const {
         return { a1, a1Flipped };
     }
 
-    void setAccumulatorState(const std::array<float, h1>& acc, const std::array<float, h1>& accFlipped) {
-        a1 = acc;
-        a1Flipped = accFlipped;
+    void setAccumulatorState(AccumulatorState state) {
+        a1 = state.first;
+        a1Flipped = state.second;
     }
 };

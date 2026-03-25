@@ -61,6 +61,9 @@ private:
 
         float output{ m_nnue.forwardAccumulator(!board.isDarkTurn()) };
         return std::clamp(static_cast<int>(output * infinity), -infinity + infinityThreshold, infinity - infinityThreshold);
+
+        // int output{ m_nnue.forwardAccumulator(!board.isDarkTurn()) };
+        // return std::clamp(output, -infinity + infinityThreshold, infinity - infinityThreshold);
     }
 
     int quiscence(int alpha, int beta, Checkers& board, int ply) {
