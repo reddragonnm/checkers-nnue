@@ -26,6 +26,9 @@ constexpr int drawState{3};
 
 int g_humanSide{0}; // 0 for Dark, 1 for Light
 
+std::vector<int> g_aiPv;
+size_t g_aiPvIndex{0};
+
 int uiToBoardSquare(int uiSquare) {
     return 63 - uiSquare;
 }
@@ -89,6 +92,8 @@ void reset_game(int humanSide) {
     g_lastScore = 0;
     g_lastDepth = 0;
     g_lastTimeMs = 0;
+    g_aiPv.clear();
+    g_aiPvIndex = 0;
 }
 
 int get_turn() {
@@ -202,11 +207,21 @@ int make_ai_move(int timeLimitMs) {
     g_lastDepth = result.completedDepth;
     g_lastTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 
-    for (int moveIndex : result.pv) {
-        g_board->makeMove(moveIndex);
+    g_aiPv = result.pv;
+    g_aiPvIndex = 0;
+
+    return (int)g_aiPv.size();
+}
+
+int execute_next_ai_move() {
+    if (!g_board || g_aiPvIndex >= g_aiPv.size()) {
+        return 0;
     }
 
-    return currentGameState();
+    bool turnSwitched = g_board->makeMove(g_aiPv[g_aiPvIndex++]);
+    
+    // 1: turn switched, 2: mid-capture (more jumps)
+    return turnSwitched ? 1 : 2;
 }
 
 int get_last_score() { return g_lastScore; }

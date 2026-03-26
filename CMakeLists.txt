@@ -16,7 +16,7 @@ if(EMSCRIPTEN)
         -sWASM=1
         -sNO_EXIT_RUNTIME=1
         "SHELL:-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap']"
-        "SHELL:-sEXPORTED_FUNCTIONS=['_malloc','_free','_init_engine','_reset_game','_get_turn','_get_human_side','_get_game_state','_get_piece_at','_get_legal_move_count_from','_get_legal_move_to','_make_human_move','_make_ai_move','_get_last_score','_get_last_depth','_get_last_time','_get_nodes_hit']"
+        "SHELL:-sEXPORTED_FUNCTIONS=['_malloc','_free','_init_engine','_reset_game','_get_turn','_get_human_side','_get_game_state','_get_piece_at','_get_legal_move_count_from','_get_legal_move_to','_make_human_move','_make_ai_move','_execute_next_ai_move','_get_last_score','_get_last_depth','_get_last_time','_get_nodes_hit']"
         --preload-file ${CMAKE_SOURCE_DIR}/nnue_best.bin@/nnue_best.bin
     )
     set_target_properties(web PROPERTIES
