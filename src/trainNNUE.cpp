@@ -118,22 +118,21 @@ void eloCheck(const std::string& v1, const std::string& v2) {
         int numMoves{ 0 };
 
         while (true) {
-            int score;
-            std::vector<int> moves;
             bool isV1Turn = (board.isDarkTurn() == v1IsDark);
 
+            SearchResult res;
             if (isV1Turn)
-                std::tie(score, moves) = v1Player.search(100, false);
+                res = v1Player.search(100, false);
             else
-                std::tie(score, moves) = v2Player.search(100, false);
+                res = v2Player.search(100, false);
 
-            if (moves.empty()) {
+            if (res.pv.empty()) {
                 if (isV1Turn) v2Wins++;
                 else v1Wins++;
                 break;
             }
 
-            for (int m : moves) board.makeMove(m);
+            for (int m : res.pv) board.makeMove(m);
 
             if (board.isDraw()) {
                 draws++;
@@ -213,7 +212,7 @@ int main() {
         while (board.getNumMoves() > 0 && !board.isDraw()) {
             auto features{ encodeBoard(board) };
 
-            auto [score, pv] { ai.search(trainSearchDepth) };
+            auto [score, pv, _] { ai.search(trainSearchDepth) };
 
             buffer.add(features, static_cast<float>(score) / infinity);
 

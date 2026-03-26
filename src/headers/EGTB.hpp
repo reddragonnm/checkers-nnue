@@ -3,7 +3,6 @@
 #include <iostream>
 #include <string>
 #include <utility>
-#include <unordered_map>
 #include <vector>
 #include <array>
 #include <filesystem>
@@ -11,13 +10,15 @@
 #include <fstream>
 
 #include "Checkers.hpp"
-#include <functional>
 
-enum WDL : uint8_t { UNKNOWN = 0, DRAW = 1, WIN = 2, LOSS = 3 };
+enum class WDL : uint8_t { UNKNOWN = 0, DRAW = 1, WIN = 2, LOSS = 3 };
+enum class DTZ : uint8_t { UNKNOWN = 0, TERMINAL = 1, NONE = 255 };
 
 class EGTB {
 private:
     std::array<std::array<std::vector<std::uint8_t>, 6>, 6> m_tables;
+    std::array<std::array<std::vector<std::uint8_t>, 6>, 6> m_dtz;
+
     std::array<std::array<int, 33>, 33> C{}; // zero initialised
 
     int getKingManIndex(const std::uint64_t& darkPieces, const std::uint64_t& lightPieces, const std::uint64_t& kingPieces) const {
@@ -137,13 +138,13 @@ private:
 
     WDL getTableVal(int a, int b, int index) const {
         if (a < 0 || a > 5 || b < 0 || b > 5 || index < 0) { // safety checks because errors
-            return UNKNOWN;
+            return WDL::UNKNOWN;
         }
 
         int pos{ index / 4 };
         int offset{ (index % 4) * 2 };
         if (pos < 0 || pos >= static_cast<int>(m_tables[a][b].size())) {
-            return UNKNOWN;
+            return WDL::UNKNOWN;
         }
 
         return static_cast<WDL>((m_tables[a][b][pos] >> offset) & 0b11);
@@ -221,16 +222,16 @@ private:
         int curB{ std::popcount(board.getLightPieces()) };
 
         if (curB == 0) {
-            setTableIndex(a, b, i, WIN);
+            setTableIndex(a, b, i, WDL::WIN);
             return true;
         }
         if (curA == 0) {
-            setTableIndex(a, b, i, LOSS);
+            setTableIndex(a, b, i, WDL::LOSS);
             return true;
         }
 
         if (numMoves == 0) {
-            setTableIndex(a, b, i, LOSS);
+            setTableIndex(a, b, i, WDL::LOSS);
             return true;
         }
 
@@ -256,7 +257,7 @@ private:
 
                 // no light pieces left
                 if (childB == 0) {
-                    setTableIndex(a, b, i, WIN);
+                    setTableIndex(a, b, i, WDL::WIN);
                     return true;
                 }
                 if (childA == 0) {
@@ -274,11 +275,11 @@ private:
                 int idx{ getIndexLTM(childB, childA, board) };
                 WDL result{ getTableVal(childB, childA, idx) };
 
-                if (result == LOSS) {
-                    setTableIndex(a, b, i, WIN);
+                if (result == WDL::LOSS) {
+                    setTableIndex(a, b, i, WDL::WIN);
                     return true;
                 }
-                else if (result != WIN) {
+                else if (result != WDL::WIN) {
                     allWin = false;
                 }
 
@@ -292,7 +293,7 @@ private:
         }
 
         if (allWin) {
-            setTableIndex(a, b, i, LOSS);
+            setTableIndex(a, b, i, WDL::LOSS);
             return true;
         }
 
@@ -318,7 +319,7 @@ private:
             int changes{ 0 };
 
             for (int i{ 0 }; i < size; i++) {
-                if (getTableVal(a, b, i) == UNKNOWN) {
+                if (getTableVal(a, b, i) == WDL::UNKNOWN) {
                     Checkers board{ decodeFromIndex(i, a, b) };
                     assert(getIndex(a, b, board) == i);
 
@@ -326,7 +327,7 @@ private:
                         changes++;
                 }
 
-                if (a != b && getTableVal(b, a, i) == UNKNOWN) {
+                if (a != b && getTableVal(b, a, i) == WDL::UNKNOWN) {
                     Checkers board{ decodeFromIndex(i, b, a) };
                     assert(getIndex(b, a, board) == i);
 
@@ -341,13 +342,13 @@ private:
             if (changes == 0) {
                 int drawSet{ 0 };
                 for (int i{ 0 }; i < size; i++) {
-                    if (getTableVal(a, b, i) == UNKNOWN) {
-                        setTableIndex(a, b, i, DRAW); // mark remaining as draw
+                    if (getTableVal(a, b, i) == WDL::UNKNOWN) {
+                        setTableIndex(a, b, i, WDL::DRAW); // mark remaining as DRAW
                         drawSet++;
                     }
 
-                    if (a != b && getTableVal(b, a, i) == UNKNOWN) {
-                        setTableIndex(b, a, i, DRAW); // mark remaining as draw
+                    if (a != b && getTableVal(b, a, i) == WDL::UNKNOWN) {
+                        setTableIndex(b, a, i, WDL::DRAW); // mark remaining as DRAW
                         drawSet++;
                     }
 
@@ -357,24 +358,24 @@ private:
             }
         }
 
-        int win{ 0 }, loss{ 0 }, draw{ 0 };
+        int WIN{ 0 }, LOSS{ 0 }, DRAW{ 0 };
         for (int i{ 0 }; i < size; i++) {
             WDL result{ getTableVal(a, b, i) };
-            if (result == WIN) win++;
-            else if (result == LOSS) loss++;
-            else if (result == DRAW) draw++;
+            if (result == WDL::WIN) WIN++;
+            else if (result == WDL::LOSS) LOSS++;
+            else if (result == WDL::DRAW) DRAW++;
         }
-        std::cout << "Table " << a << "v" << b << ": " << win << " wins, " << loss << " losses, " << draw << " draws\n";
+        std::cout << "Table " << a << "v" << b << ": " << WIN << " wins, " << LOSS << " losses, " << DRAW << " draws\n";
 
         if (a != b) {
-            win = 0; loss = 0; draw = 0;
+            WIN = 0; LOSS = 0; DRAW = 0;
             for (int i{ 0 }; i < size; i++) {
                 WDL result{ getTableVal(b, a, i) };
-                if (result == WIN) win++;
-                else if (result == LOSS) loss++;
-                else if (result == DRAW) draw++;
+                if (result == WDL::WIN) WIN++;
+                else if (result == WDL::LOSS) LOSS++;
+                else if (result == WDL::DRAW) DRAW++;
             }
-            std::cout << "Table " << b << "v" << a << ": " << win << " wins, " << loss << " losses, " << draw << " draws\n";
+            std::cout << "Table " << b << "v" << a << ": " << WIN << " wins, " << LOSS << " losses, " << DRAW << " draws\n";
         }
         std::cout << "\n";
     }
@@ -449,20 +450,20 @@ public:
 
     WDL probe(const Checkers& board) const {
         if (board.isMidCapture())
-            return UNKNOWN;
+            return WDL::UNKNOWN;
 
         int a{ std::popcount(board.getDarkPieces()) };
         int b{ std::popcount(board.getLightPieces()) };
 
-        if (b == 0) return (board.isDarkTurn() ? WIN : LOSS);   // dark won, no light pieces
-        if (a == 0) return (board.isDarkTurn() ? LOSS : WIN);  // dark lost, no dark pieces
+        if (b == 0) return (board.isDarkTurn() ? WDL::WIN : WDL::LOSS);   // dark won, no light pieces
+        if (a == 0) return (board.isDarkTurn() ? WDL::LOSS : WDL::WIN);  // dark lost, no dark pieces
 
         if (a + b > 5)
-            return UNKNOWN;
+            return WDL::UNKNOWN;
 
         if (m_tables[a][b].empty()) {
             std::cerr << "Table for " << a << "v" << b << " not built or loaded!\n";
-            return UNKNOWN;
+            return WDL::UNKNOWN;
         }
 
         int idx;

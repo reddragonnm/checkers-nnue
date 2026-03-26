@@ -24,7 +24,17 @@ struct TTEntry {
     std::uint8_t flag;
 };
 
+struct SearchResult {
+    int score;
+    std::vector<int> pv;
+    int completedDepth;
+};
+
+#ifdef __EMSCRIPTEN__
+constexpr int ttSize{ 1 << 20 };
+#else
 constexpr int ttSize{ 1 << 24 };
+#endif
 
 class AIPlayer {
 private:
@@ -272,7 +282,7 @@ private:
 public:
     AIPlayer(Checkers& board, EGTB& egtb, NNUEInference& nnue) : m_board(board), m_egtb(egtb), m_nnue(nnue), m_nodesHit(0), tt(ttSize, { 0, -1, 0, -1, 0 }) {}
 
-    std::pair<int, std::vector<int>> search(int input = 10, bool depthInput = true, bool printInfo = false) {
+    SearchResult search(int input = 10, bool depthInput = true, bool printInfo = false) {
         int score{ 0 };
         int d{ 1 };
         int completedDepth{ 0 };
@@ -316,7 +326,7 @@ public:
             std::cout << " EGTB Hits: " << m_egtbHits << '\n';
         }
 
-        return { score, completedPV };
+        return { score, completedPV, completedDepth };
     }
 
     int getNodesHit() {

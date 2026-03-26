@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Checkers NNUE</title>
+  <link rel="stylesheet" href="styles.css?v=3">
+</head>
+
+<body>
+  <div class="main-container">
+    <header>
+      <h1>Checkers NNUE</h1>
+    </header>
+
+    <div class="game-layout">
+      <aside class="sidebar-left">
+        <div class="eval-bar-container" id="eval-bar-ref">
+          <div id="eval-fill" class="eval-fill"></div>
+          <span id="eval-text">0.0</span>
+        </div>
+      </aside>
+
+      <main class="board-container">
+        <div id="board" class="board"></div>
+      </main>
+
+      <aside class="sidebar-right">
+        <section class="info-panel">
+          <div class="status-box">
+            <h2 id="status">Loading Engine...</h2>
+            <p id="turn-indicator">Initializing WASM</p>
+          </div>
+
+          <div class="controls">
+            <div class="btn-group">
+              <button id="reset-dark" class="btn btn-primary" disabled>New Game (Dark)</button>
+              <button id="reset-light" class="btn btn-primary" disabled>New Game (Light)</button>
+            </div>
+            <button id="flip-board" class="btn btn-secondary" disabled>Flip Board</button>
+
+            <div class="setting-row">
+              <label for="think-time">Thinking Time:</label>
+              <div class="slider-container">
+                <input type="range" id="think-time" min="100" max="5000" step="100" value="1000">
+                <span id="think-time-val">1000ms</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="stats-panel">
+            <h3>Engine Statistics</h3>
+            <div class="stat-row">
+              <span>Evaluation:</span>
+              <span id="stat-eval">0.00</span>
+            </div>
+            <div class="stat-row">
+              <span>Search Depth:</span>
+              <span id="stat-depth">0</span>
+            </div>
+            <div class="stat-row">
+              <span>Compute Time:</span>
+              <span id="stat-time">0ms</span>
+            </div>
+            <div class="stat-row">
+              <span>Nodes Visited:</span>
+              <span id="stat-nodes">0</span>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    var Module = {
+      onRuntimeInitialized() {
+        window.dispatchEvent(new Event("wasm-ready"));
+      }
+    };
+  </script>
+  <script src="checkers.js"></script>
+  <script src="app.js?v=3"></script>
+</body>
+
+</html>
