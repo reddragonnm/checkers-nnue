@@ -312,11 +312,10 @@ private:
             m_tables[b][a].resize((size + 3) / 4, 0);
         }
 
-        bool changed{ true };
         int pass{ 0 };
-
-        while (changed) {
-            changed = false;
+        int totalChanges{ 0 };
+        while (true) {
+            int changes{ 0 };
 
             for (int i{ 0 }; i < size; i++) {
                 if (getTableVal(a, b, i) == UNKNOWN) {
@@ -324,7 +323,7 @@ private:
                     assert(getIndex(a, b, board) == i);
 
                     if (evaluateBoard(i, a, b, board))
-                        changed = true;
+                        changes++;
                 }
 
                 if (a != b && getTableVal(b, a, i) == UNKNOWN) {
@@ -332,20 +331,29 @@ private:
                     assert(getIndex(b, a, board) == i);
 
                     if (evaluateBoard(i, b, a, board))
-                        changed = true;
+                        changes++;
                 }
             }
 
-            if (!changed) {
+            totalChanges += changes;
+            std::cout << "Pass " << pass++ << " changes:" << changes << " total changes:" << totalChanges << "/" << (a == b ? size : (size * 2)) << '\n';
+
+            if (changes == 0) {
+                int drawSet{ 0 };
                 for (int i{ 0 }; i < size; i++) {
                     if (getTableVal(a, b, i) == UNKNOWN) {
                         setTableIndex(a, b, i, DRAW); // mark remaining as draw
+                        drawSet++;
                     }
 
                     if (a != b && getTableVal(b, a, i) == UNKNOWN) {
                         setTableIndex(b, a, i, DRAW); // mark remaining as draw
+                        drawSet++;
                     }
+
                 }
+                std::cout << "Draws set: " << drawSet << " total changes: " << (totalChanges + drawSet) << "/" << (a == b ? size : (size * 2)) << '\n';
+                break;
             }
         }
 
@@ -368,6 +376,7 @@ private:
             }
             std::cout << "Table " << b << "v" << a << ": " << win << " wins, " << loss << " losses, " << draw << " draws\n";
         }
+        std::cout << "\n";
     }
 
 public:
@@ -380,7 +389,7 @@ public:
         }
     }
 
-    void buildOrLoad(const std::string& filepath) {
+    void buildOrLoad(const std::string& filepath, const std::string& dtzFilepath) {
         namespace fs = std::filesystem;
 
         if (fs::exists(filepath)) {

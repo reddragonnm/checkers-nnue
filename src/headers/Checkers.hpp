@@ -580,6 +580,14 @@ public:
         return m_midCapture;
     }
 
+    int getDrawCounter() const {
+        return m_drawCounter;
+    }
+
+    void setDrawCounter(int drawCounter) {
+        m_drawCounter = drawCounter;
+    }
+
     static std::uint64_t flipBoard(std::uint64_t board) {
         // flip board for light pieces to reuse dark move generation
         std::uint64_t flipped{ 0 };

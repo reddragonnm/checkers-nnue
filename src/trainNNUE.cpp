@@ -98,7 +98,7 @@ void eloCheck(const std::string& v1, const std::string& v2) {
     Checkers board{};
 
     EGTB egtb;
-    egtb.buildOrLoad("egtb.bin");
+    egtb.buildOrLoad("egtb.bin", "egtb_dtz.bin");
 
     NNUE nnueV1{ {128, 256, 32, 1} }; nnueV1.load(v1);
     NNUE nnueV2{ {128, 256, 32, 1} }; nnueV2.load(v2);
@@ -170,7 +170,7 @@ float calculateMSE(const Matrix& output, const Matrix& target) {
 
 int main() {
     EGTB egtb;
-    egtb.buildOrLoad("egtb.bin");
+    egtb.buildOrLoad("egtb.bin", "egtb_dtz.bin");
 
     NNUE nnue{ loadNNUE("checkpoints") };
     NNUEInference nnueInference{ nnue };

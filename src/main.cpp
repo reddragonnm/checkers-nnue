@@ -131,7 +131,7 @@ int main() {
     sf::RenderWindow window(sf::VideoMode({ windowSize, windowSize }), "SFML");
 
     EGTB egtb;
-    egtb.buildOrLoad("egtb.bin");
+    egtb.buildOrLoad("egtb.bin", "egtb_dtz.bin");
 
     NNUE nnue{ {128, 256, 32, 1} }; nnue.load("nnue_best.bin");
     NNUEInference nnueInference{ nnue };
