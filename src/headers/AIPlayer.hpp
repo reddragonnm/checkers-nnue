@@ -4,7 +4,6 @@
 #include <chrono>
 #include <iostream>
 #include <limits>
-#include <map>
 
 #include "Checkers.hpp"
 #include "EGTB.hpp"
@@ -62,32 +61,40 @@ private:
     }
 
     int evaluate(Checkers& board) {
-        // int dark{ std::popcount(board.getDarkPieces()) +
-        //          std::popcount(board.getDarkPieces() & board.getKingPieces()) };
-        // int light{ std::popcount(board.getLightPieces()) +
-        //           std::popcount(board.getLightPieces() & board.getKingPieces()) };
-
-        // return board.isDarkTurn() ? (dark - light) : (light - dark);
-
         float output{ m_nnue.forwardAccumulator(!board.isDarkTurn()) };
         return std::clamp(static_cast<int>(output * infinity), -infinity + infinityThreshold, infinity - infinityThreshold);
+    }
 
-        // int output{ m_nnue.forwardAccumulator(!board.isDarkTurn()) };
-        // return std::clamp(output, -infinity + infinityThreshold, infinity - infinityThreshold);
+    int probeTablebaseScore(Checkers& board) {
+        if (std::popcount(board.getDarkPieces()) + std::popcount(board.getLightPieces()) > 5)
+            return searchAborted;
+
+        WDL result{ m_egtb.probe(board) };
+        if (result == WDL::UNKNOWN)
+            return searchAborted;
+
+        m_egtbHits++;
+
+        if (result == WDL::DRAW)
+            return 0;
+
+        int dtz{ m_egtb.probeDTZ(board) };
+        int distance{ dtz >= 0 ? dtz : (infinityThreshold - 1) };
+        distance = std::clamp(distance, 1, infinityThreshold - 1);
+
+        if (result == WDL::WIN)
+            return infinity - distance;
+
+        return -infinity + distance;
     }
 
     int quiscence(int alpha, int beta, Checkers& board, int ply) {
         if (shouldStop())
             return searchAborted;
 
-
-        // if (!board.isMidCapture()) {
-        //     WDL result{ m_egtb.probe(board) };
-        //     if (result != UNKNOWN) {
-        //         m_egtbHits++;
-        //         return result == WIN ? infinity : (result == LOSS ? -infinity : 0);
-        //     }
-        // }
+        int tbScore{ probeTablebaseScore(board) };
+        if (tbScore != searchAborted)
+            return tbScore;
 
         int eval{ evaluate(board) };
         if (eval >= beta)
@@ -124,9 +131,20 @@ private:
         return eval;
     }
 
-    int negamax(int alpha, int beta, int depth, Checkers& board, int ply = 0) {
+    int negamax(int alpha, int beta, int depth, Checkers& board, std::vector<int>& pv, int ply = 0) {
+        pv.clear();
+
         if (shouldStop())
             return searchAborted;
+
+        if (board.isDraw())
+            return 0;
+
+        if (ply > 0) {
+            int tbScore{ probeTablebaseScore(board) };
+            if (tbScore != searchAborted)
+                return tbScore;
+        }
 
         std::uint64_t hash{ board.hash() };
         TTEntry& entry{ tt[hash & (ttSize - 1)] };
@@ -153,8 +171,6 @@ private:
 
         const int numMoves{ board.getNumMoves() };
 
-        if (board.isDraw())
-            return 0;
         if (numMoves == 0)
             return -infinity + ply;
         if (depth == 0)
@@ -171,13 +187,16 @@ private:
                 if (pass == 1 && i == hashMove)
                     continue;
 
+                std::vector<int> childPV;
                 int score;
-                if (board.makeMove(i)) { // turn switched
+                bool turnSwitched{ board.makeMove(i) };
+
+                if (turnSwitched) {
                     m_nodesHit++;
-                    score = -negamax(-beta, -alpha, depth - 1, board, ply + 1);
+                    score = -negamax(-beta, -alpha, depth - 1, board, childPV, ply + 1);
                 }
                 else {
-                    score = negamax(alpha, beta, depth, board, ply);
+                    score = negamax(alpha, beta, depth, board, childPV, ply);
                 }
 
                 board.undoMove();
@@ -188,6 +207,9 @@ private:
                 if (score > bestVal) {
                     bestVal = score;
                     bestMove = i;
+                    pv = { i };
+                    if (!turnSwitched)
+                        pv.insert(pv.end(), childPV.begin(), childPV.end());
                 }
 
                 alpha = std::max(alpha, score);
@@ -216,34 +238,30 @@ private:
         return bestVal;
     }
 
-    std::vector<int> extractPV() {
-        std::vector<int> pv;
-        int movesMade{ 0 };
+    void ensureCompleteTurn(std::vector<int>& pv) {
+        int applied = 0;
+        bool switched = false;
 
-        while (true) {
-            TTEntry& entry = tt[m_board.hash() & (ttSize - 1)];
-            if (entry.key != m_board.hash() || entry.move == -1)
-                break;
-
-            int move = entry.move;
-            if (move >= m_board.getNumMoves()) {
-                move = 0; // rare TT move corruption, just return some valid move
-                std::cerr << "TT move corruption detected\n";
-            }
-
-            pv.push_back(move);
-            movesMade++;
-            if (m_board.makeMove(move)) // if turn over
-                break;
+        for (int m : pv) {
+            switched = m_board.makeMove(m);
+            applied++;
+            if (switched) break;
         }
 
-        for (int i = 0; i < movesMade; i++)
-            m_board.undoMove();
+        while (!switched && m_board.getNumMoves() > 0) {
+            int move = 0;
+            TTEntry& e = tt[m_board.hash() & (ttSize - 1)];
+            if (e.key == m_board.hash() && e.move >= 0 && e.move < m_board.getNumMoves())
+                move = e.move;
+            pv.push_back(move);
+            switched = m_board.makeMove(move);
+            applied++;
+        }
 
-        return pv;
+        for (int i = 0; i < applied; i++) m_board.undoMove();
     }
 
-    bool aspirationWindowSearch(int depth, int& curScore) {
+    bool aspirationWindowSearch(int depth, int& curScore, std::vector<int>& pv) {
         int delta = 50;
         int alpha = curScore - delta;
         int beta = curScore + delta;
@@ -258,7 +276,8 @@ private:
         }
 
         while (true) {
-            int result = negamax(alpha, beta, depth, m_board);
+            std::vector<int> localPV;
+            int result = negamax(alpha, beta, depth, m_board, localPV);
 
             if (result == searchAborted) return false;
 
@@ -272,6 +291,7 @@ private:
             }
             else {
                 curScore = result;
+                pv = localPV;
                 return true;
             }
 
@@ -294,22 +314,20 @@ public:
 
         if (depthInput) {
             for (; d <= input; d++) {
-                if (!aspirationWindowSearch(d, score))
+                if (!aspirationWindowSearch(d, score, completedPV))
                     break;
 
                 completedDepth = d;
-                completedPV = extractPV();
             }
         }
         else {
             m_deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(input);
             while (!shouldStop() && d <= 200) {
                 stoppedDepth = d;
-                if (!aspirationWindowSearch(d, score))
+                if (!aspirationWindowSearch(d, score, completedPV))
                     break;
 
                 completedDepth = d;
-                completedPV = extractPV();
                 d++;
             }
         }
@@ -318,6 +336,8 @@ public:
 
         if (completedPV.empty() && m_board.getNumMoves() > 0)
             completedPV.push_back(0);
+
+        ensureCompleteTurn(completedPV);
 
         if (printInfo) {
             std::cout << "Evaluation: " << score << " Depth: " << completedDepth;

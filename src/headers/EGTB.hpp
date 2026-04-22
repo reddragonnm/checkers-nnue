@@ -12,7 +12,7 @@
 #include "Checkers.hpp"
 
 enum class WDL : uint8_t { UNKNOWN = 0, DRAW = 1, WIN = 2, LOSS = 3 };
-enum class DTZ : uint8_t { UNKNOWN = 0, TERMINAL = 1, NONE = 255 };
+enum class DTZ : uint8_t { UNKNOWN = 0, TERMINAL = 1, NONE = 255 }; // full uint8 used
 
 class EGTB {
 private:
@@ -148,6 +148,30 @@ private:
         }
 
         return static_cast<WDL>((m_tables[a][b][pos] >> offset) & 0b11);
+    }
+
+    void setDTZIndex(int a, int b, int index, std::uint8_t val) {
+        if (a < 0 || a > 5 || b < 0 || b > 5 || index < 0 || index >= m_dtz[a][b].size()) { // safety checks because errors
+            return;
+        }
+
+        m_dtz[a][b][index] = val;
+    }
+
+    std::uint8_t getDTZVal(int a, int b, int index) const {
+        if (a < 0 || a > 5 || b < 0 || b > 5 || index < 0 || index >= m_dtz[a][b].size()) { // safety checks because errors
+            return static_cast<std::uint8_t>(DTZ::UNKNOWN);
+        }
+
+        return m_dtz[a][b][index];
+    }
+
+    bool updateDTZ(int a, int b, int index, std::uint8_t val) {
+        if (getDTZVal(a, b, index) == val)
+            return false;
+
+        setDTZIndex(a, b, index, val);
+        return true;
     }
 
     int expandBoard(int i) const {
@@ -380,6 +404,207 @@ private:
         std::cout << "\n";
     }
 
+
+    bool evaluateDTZ(int i, int a, int b, Checkers& board) {
+        WDL myWDL{ getTableVal(a, b, i) };
+
+        auto none{ static_cast<std::uint8_t>(DTZ::NONE) };
+        auto unknown{ static_cast<std::uint8_t>(DTZ::UNKNOWN) };
+        auto terminal{ static_cast<std::uint8_t>(DTZ::TERMINAL) };
+
+        if (myWDL == WDL::UNKNOWN || myWDL == WDL::DRAW) {
+            return updateDTZ(a, b, i, none);
+        }
+
+        int curA{ std::popcount(board.getDarkPieces()) };
+        int curB{ std::popcount(board.getLightPieces()) };
+
+        if (curA == 0 || curB == 0 || board.getNumMoves() == 0) {
+            return updateDTZ(a, b, i, terminal);
+        }
+
+        std::stack<std::pair<int, int>> s;
+        for (int m{ board.getNumMoves() - 1 }; m >= 0; m--)
+            s.push({ 0, m });
+
+        int curDepth{ 0 };
+
+        std::uint8_t bestVal{ myWDL == WDL::WIN ? none : terminal };
+        bool found{ false };
+        bool allResolved{ true };
+
+        while (!s.empty()) {
+            auto [depth, moveIdx] = s.top();
+            s.pop();
+
+            while (curDepth > depth) {
+                board.undoMove();
+                curDepth--;
+            }
+
+            if (board.makeMove(moveIdx)) {
+                int childA{ std::popcount(board.getDarkPieces()) };
+                int childB{ std::popcount(board.getLightPieces()) };
+
+                if (childA == 0 || childB == 0 || board.getNumMoves() == 0) {
+                    if (myWDL == WDL::WIN) {
+                        bestVal = std::min(bestVal, static_cast<std::uint8_t>(terminal + 1)); // child is terminal so this dtz is 2
+                        found = true;
+                    }
+
+                    // child is lost so we dont see parent lost branch
+
+                    board.undoMove();
+                    continue;
+                }
+
+                if (childA < 0 || childA > 5 || childB < 0 || childB > 5
+                    || m_tables[childB][childA].empty() || m_dtz[childB][childA].empty()) {
+                    std::cerr << "This should not happen\n";
+                    std::abort();
+                }
+
+                int childIdx{ getIndexLTM(childB, childA, board) };
+                WDL childWDL{ getTableVal(childB, childA, childIdx) };
+
+                // only check relevant positions
+                if (!(myWDL == WDL::WIN ? (childWDL == WDL::LOSS) : (childWDL == WDL::WIN))) {
+                    board.undoMove();
+                    continue;
+                }
+
+                auto childStored{ getDTZVal(childB, childA, childIdx) };
+
+                if (childStored == unknown) {
+                    allResolved = false;
+                    board.undoMove();
+                    continue;
+                }
+
+                if (childStored == none) {
+                    if (myWDL == WDL::LOSS) allResolved = false;
+
+                    board.undoMove();
+                    continue;
+                }
+
+                std::uint8_t candidate;
+                if (board.getDrawCounter() == 0) {
+                    candidate = terminal + 1;
+                }
+                else {
+                    if (childStored >= 254u) {
+                        if (myWDL == WDL::LOSS) allResolved = false;
+                        else found = true;
+
+                        board.undoMove();
+                        continue;
+                    }
+
+                    candidate = childStored + 1;
+                }
+
+                if (myWDL == WDL::WIN)
+                    bestVal = std::min(bestVal, candidate);
+                else
+                    bestVal = std::max(bestVal, candidate);
+
+                found = true;
+                board.undoMove();
+            }
+            else {
+                curDepth++;
+                for (int m{ board.getNumMoves() - 1 }; m >= 0; m--)
+                    s.push({ depth + 1, m });
+            }
+        }
+
+        // win resolved when loss with known dtz found
+        // loss resolved when all win children resolved
+        // so if cant resolve then return false
+        if (!(myWDL == WDL::WIN ? found : (found && allResolved))) {
+            return false;
+        }
+
+        return updateDTZ(a, b, i, bestVal);
+    }
+
+    void buildDTZ(int a, int b) {
+        int size{ C[32][a + b] * C[a + b][a] * (1 << (a + b)) };
+        std::cout << "Building DTZ table " << a << "v" << b << " of size " << size << '\n';
+
+        m_dtz[a][b].resize(size, static_cast<std::uint8_t>(DTZ::UNKNOWN));
+        if (a != b) m_dtz[b][a].assign(size, static_cast<std::uint8_t>(DTZ::UNKNOWN));
+
+        int pass{ 0 };
+        int totalChanges{ 0 };
+
+        std::uint8_t none{ static_cast<std::uint8_t>(DTZ::NONE) };
+        std::uint8_t unknown{ static_cast<std::uint8_t>(DTZ::UNKNOWN) };
+
+        while (true) {
+            int changes = 0;
+
+            for (int i{ 0 }; i < size; i++) {
+                auto v{ getDTZVal(a, b, i) };
+                if (v != none) {
+                    Checkers board{ decodeFromIndex(i, a, b) };
+                    if (evaluateDTZ(i, a, b, board))
+                        changes++;
+                }
+
+                if (a != b) {
+                    auto v2{ getDTZVal(b, a, i) };
+                    if (v2 != none) {
+                        Checkers board{ decodeFromIndex(i, b, a) };
+                        if (evaluateDTZ(i, b, a, board))
+                            changes++;
+                    }
+                }
+            }
+
+            totalChanges += changes;
+            std::cout << "Pass " << pass++ << " changes:" << changes << " total changes:" << totalChanges << '\n';
+
+            if (changes == 0) {
+                int noneSet{ 0 };
+                for (int i{ 0 }; i < size; i++) {
+                    if (getDTZVal(a, b, i) == unknown) {
+                        setDTZIndex(a, b, i, none);
+                        noneSet++;
+                    }
+
+                    if (a != b && getDTZVal(b, a, i) == unknown) {
+                        setDTZIndex(b, a, i, none);
+                        noneSet++;
+                    }
+                }
+                std::cout << "Nones set: " << noneSet << " total changes: " << (totalChanges + noneSet) << '\n';
+                break;
+            }
+        }
+
+        int numUnknown{ 0 }, numNone{ 0 }, numTerminal{ 0 };
+        for (int i{ 0 }; i < size; i++) {
+            auto v{ getDTZVal(a, b, i) };
+            if (v == unknown) numUnknown++;
+            else if (v == none) numNone++;
+            else if (v == static_cast<std::uint8_t>(DTZ::TERMINAL)) numTerminal++;
+        }
+        std::cout << "DTZ Table " << a << "v" << b << ": " << numUnknown << " unknown, " << numNone << " none, " << numTerminal << " terminal\n";
+
+        if (a != b) {
+            numUnknown = 0; numNone = 0; numTerminal = 0;
+            for (int i{ 0 }; i < size; i++) {
+                auto v{ getDTZVal(b, a, i) };
+                if (v == unknown) numUnknown++;
+                else if (v == none) numNone++;
+                else if (v == static_cast<std::uint8_t>(DTZ::TERMINAL)) numTerminal++;
+            }
+            std::cout << "DTZ Table " << b << "v" << a << ": " << numUnknown << " unknown, " << numNone << " none, " << numTerminal << " terminal\n";
+        }
+    }
+
 public:
     EGTB() {
         for (int i{ 0 }; i <= 32; i++) {
@@ -446,6 +671,55 @@ public:
 
             std::cout << "Saved EGTB to " << filepath << "\n";
         }
+
+        if (fs::exists(dtzFilepath)) {
+            std::cout << "Loading DTZ from " << dtzFilepath << "...\n";
+
+            std::ifstream file{ dtzFilepath, std::ios::binary };
+            if (!file) {
+                std::cerr << "Failed to open " << dtzFilepath << "\n";
+                return;
+            }
+
+            for (int a{ 0 }; a <= 5; a++) {
+                for (int b{ 0 }; b <= 5; b++) {
+                    std::size_t size{};
+                    file.read(reinterpret_cast<char*>(&size), sizeof(size));
+                    m_dtz[a][b].resize(size);
+                    if (size > 0)
+                        file.read(reinterpret_cast<char*>(m_dtz[a][b].data()), size);
+                }
+            }
+
+            std::cout << "Loaded DTZ\n";
+        }
+        else {
+            std::cout << "Building DTZ...\n";
+
+            buildDTZ(1, 1);
+            buildDTZ(2, 1);
+            buildDTZ(2, 2);
+            buildDTZ(3, 1);
+            buildDTZ(3, 2);
+            buildDTZ(4, 1);
+
+            std::ofstream file{ dtzFilepath, std::ios::binary };
+            if (!file) {
+                std::cerr << "Failed to write " << dtzFilepath << "\n";
+                return;
+            }
+
+            for (int a{ 0 }; a <= 5; a++) {
+                for (int b{ 0 }; b <= 5; b++) {
+                    std::size_t size{ m_dtz[a][b].size() };
+                    file.write(reinterpret_cast<const char*>(&size), sizeof(size));
+                    if (size > 0)
+                        file.write(reinterpret_cast<const char*>(m_dtz[a][b].data()), size);
+                }
+            }
+
+            std::cout << "Saved DTZ to " << dtzFilepath << "\n";
+        }
     }
 
     WDL probe(const Checkers& board) const {
@@ -475,5 +749,25 @@ public:
             idx = getIndexLTM(b, a, board);
             return getTableVal(b, a, idx);
         }
+    }
+
+    int probeDTZ(const Checkers& board) const {
+        if (board.isMidCapture()) return -1;
+
+        int a{ std::popcount(board.getDarkPieces()) };
+        int b{ std::popcount(board.getLightPieces()) };
+
+        if (a + b > 5) return -1;
+        if (a == 0 || b == 0) return -1;
+        if (board.getNumMoves() == 0) return 0;
+
+        int idx{ board.isDarkTurn() ? getIndex(a, b, board) : getIndexLTM(b, a, board) };
+        auto stored{ board.isDarkTurn()
+            ? getDTZVal(a, b, idx)
+            : getDTZVal(b, a, idx) };
+
+        if (stored == static_cast<std::uint8_t>(DTZ::NONE) || stored == static_cast<std::uint8_t>(DTZ::UNKNOWN)) return -1;
+
+        return static_cast<int>(stored) - static_cast<int>(DTZ::TERMINAL);
     }
 };
