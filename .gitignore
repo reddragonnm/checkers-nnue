@@ -1,6 +1,5 @@
 .zed
 .vscode
-src/matchmaking
 
 # Prerequisites
 *.d
