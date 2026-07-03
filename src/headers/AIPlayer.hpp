@@ -46,6 +46,11 @@ private:
     int m_nodesHit{ 0 };
     int m_hashCollisions{ 0 };
     int m_egtbHits{ 0 };
+
+    int m_ttProbes{ 0 };      // found matching hash
+    int m_ttUsefulHits{ 0 };  // depth sufficient
+    int m_ttCutoffs{ 0 };     // returned early from TT
+
     bool m_stopSearch{ false };
     bool m_hasDeadline{ false };
     std::chrono::steady_clock::time_point m_deadline;
@@ -113,6 +118,7 @@ private:
         for (int i{ 0 }; i < numMoves; i++) {
             int score;
             if (board.makeMove(i)) {
+                m_nodesHit++;
                 score = -quiscence(-beta, -alpha, board, ply + 1);
             }
             else {
@@ -132,6 +138,7 @@ private:
     }
 
     int negamax(int alpha, int beta, int depth, Checkers& board, std::vector<int>& pv, int ply = 0) {
+        // m_nodesHit++;
         pv.clear();
 
         if (shouldStop())
@@ -152,17 +159,31 @@ private:
         if (entry.key != 0 && entry.key != hash)
             m_hashCollisions++;
 
+        if (entry.key == hash) {
+            m_ttProbes++;
+        }
+
         if (entry.key == hash && entry.depth >= depth) {
+            m_ttUsefulHits++;
+
             int score{ entry.score };
             if (score > infinity - infinityThreshold) score -= ply;
             else if (score < -infinity + infinityThreshold) score += ply;
 
-            if (entry.flag == TTExact)
+            if (entry.flag == TTExact) {
+                m_ttCutoffs++;
                 return score;
-            if (entry.flag == TTLower && score >= beta)
+            }
+
+            if (entry.flag == TTLower && score >= beta) {
+                m_ttCutoffs++;
                 return score;
-            if (entry.flag == TTUpper && score <= alpha)
+            }
+
+            if (entry.flag == TTUpper && score <= alpha) {
+                m_ttCutoffs++;
                 return score;
+            }
         }
 
         int hashMove{ -1 };
@@ -266,10 +287,6 @@ private:
         int alpha = curScore - delta;
         int beta = curScore + delta;
 
-        m_nodesHit = 0;
-        m_egtbHits = 0;
-        m_hashCollisions = 0;
-
         if (depth < 4) {
             alpha = -2 * infinity;
             beta = 2 * infinity;
@@ -303,6 +320,13 @@ public:
     AIPlayer(Checkers& board, EGTB& egtb, NNUEInference& nnue) : m_board(board), m_egtb(egtb), m_nnue(nnue), m_nodesHit(0), tt(ttSize, { 0, -1, 0, -1, 0 }) {}
 
     SearchResult search(int input = 10, bool depthInput = true, bool printInfo = false) {
+        m_nodesHit = 0;
+        m_egtbHits = 0;
+        m_hashCollisions = 0;
+        m_ttProbes = 0;
+        m_ttUsefulHits = 0;
+        m_ttCutoffs = 0;
+
         int score{ 0 };
         int d{ 1 };
         int completedDepth{ 0 };
@@ -363,5 +387,17 @@ public:
 
     void resetTT() {
         std::fill(tt.begin(), tt.end(), TTEntry{ 0, -1, 0, -1, 0 });
+    }
+
+    int getTTProbes() {
+        return m_ttProbes;
+    }
+
+    int getTTUsefulHits() {
+        return m_ttUsefulHits;
+    }
+
+    int getTTCutoffs() {
+        return m_ttCutoffs;
     }
 };
