@@ -10,8 +10,12 @@
 
 constexpr int squareSize{ 100 };
 
+int displaySquare(int square, bool flipBoard) {
+    return flipBoard ? square : 63 - square;
+}
+
 void displayGrid(sf::RenderWindow& window) {
-    static sf::RectangleShape rect{ {squareSize, squareSize} };
+    static sf::RectangleShape rect{ { squareSize, squareSize } };
 
     for (int i{ 0 }; i < 8; ++i) {
         for (int j{ 0 }; j < 8; ++j) {
@@ -24,7 +28,7 @@ void displayGrid(sf::RenderWindow& window) {
     }
 }
 
-void displayBoard(const Checkers& board, sf::RenderWindow& window) {
+void displayBoard(const Checkers& board, sf::RenderWindow& window, bool flipBoard) {
     float circleRadius{ 0.75f * static_cast<float>(squareSize) / 2.f };
     static sf::CircleShape circle{ circleRadius };
     circle.setOrigin({ circleRadius, circleRadius });
@@ -37,8 +41,9 @@ void displayBoard(const Checkers& board, sf::RenderWindow& window) {
     circle.setFillColor(sf::Color{ 80, 52, 41 });
     for (int i{ 0 }; i < 64; ++i) {
         if ((idx << i) & darkBoard) {
-            circle.setPosition({ squareSize / 2.f + squareSize * ((63 - i) % 8),
-                                squareSize / 2.f + squareSize * ((63 - i) / 8) });
+            auto square{ displaySquare(i, flipBoard) };
+            circle.setPosition({ squareSize / 2.f + squareSize * (square % 8),
+                                squareSize / 2.f + squareSize * (square / 8) });
             window.draw(circle);
         }
     }
@@ -46,8 +51,9 @@ void displayBoard(const Checkers& board, sf::RenderWindow& window) {
     circle.setFillColor(sf::Color{ 219, 172, 126 });
     for (int i{ 0 }; i < 64; ++i) {
         if ((idx << i) & lightBoard) {
-            circle.setPosition({ squareSize / 2.f + squareSize * ((63 - i) % 8),
-                                squareSize / 2.f + squareSize * ((63 - i) / 8) });
+            auto square{ displaySquare(i, flipBoard) };
+            circle.setPosition({ squareSize / 2.f + squareSize * (square % 8),
+                                squareSize / 2.f + squareSize * (square / 8) });
             window.draw(circle);
         }
     }
@@ -58,24 +64,26 @@ void displayBoard(const Checkers& board, sf::RenderWindow& window) {
     circle2.setFillColor(sf::Color::Yellow);
     for (int i{ 0 }; i < 64; ++i) {
         if ((idx << i) & kingPieces) {
-            circle2.setPosition({ squareSize / 2.f + squareSize * ((63 - i) % 8),
-                                 squareSize / 2.f + squareSize * ((63 - i) / 8) });
+            auto square{ displaySquare(i, flipBoard) };
+            circle2.setPosition({ squareSize / 2.f + squareSize * (square % 8),
+                                 squareSize / 2.f + squareSize * (square / 8) });
             window.draw(circle2);
         }
     }
 }
 
-void displayValidMoves(const Checkers& board, sf::RenderWindow& window, int selected) {
+void displayValidMoves(const Checkers& board, sf::RenderWindow& window, int selected,
+    bool flipBoard) {
     const int numMoves{ board.getNumMoves() };
     const auto& moves{ board.getMoves() };
 
     for (int i{ 0 }; i < numMoves; i++) {
         const auto& move = moves[i];
         if (board.isCaptureMove(move)) { // capture
-            if (selected == 63 - board.getFromSquare(move)) {
-                auto toSq{ 63 - board.getToSquare(move) };
+            if (selected == displaySquare(board.getFromSquare(move), flipBoard)) {
+                auto toSq{ displaySquare(board.getToSquare(move), flipBoard) };
 
-                sf::RectangleShape rect{ {squareSize, squareSize} };
+                sf::RectangleShape rect{ { squareSize, squareSize } };
                 rect.setFillColor(sf::Color::Red);
                 rect.setPosition({ static_cast<float>(toSq % 8) * squareSize,
                                   static_cast<float>(toSq / 8) * squareSize });
@@ -84,10 +92,10 @@ void displayValidMoves(const Checkers& board, sf::RenderWindow& window, int sele
             }
         }
         else { // move
-            if (selected == 63 - board.getFromSquare(move)) {
-                auto toSq{ 63 - board.getToSquare(move) };
+            if (selected == displaySquare(board.getFromSquare(move), flipBoard)) {
+                auto toSq{ displaySquare(board.getToSquare(move), flipBoard) };
 
-                sf::RectangleShape rect{ {squareSize, squareSize} };
+                sf::RectangleShape rect{ { squareSize, squareSize } };
                 rect.setFillColor(sf::Color::Red);
                 rect.setPosition({ static_cast<float>(toSq % 8) * squareSize,
                                   static_cast<float>(toSq / 8) * squareSize });
@@ -99,21 +107,21 @@ void displayValidMoves(const Checkers& board, sf::RenderWindow& window, int sele
 }
 
 std::vector<int> attemptToMakeMove(int selected, int newPos, Checkers& board, AIPlayer& ai,
-    bool& gameOver) {
-    if (selected == -1 || gameOver)
+    bool& gameOver, bool humanFirst, bool flipBoard) {
+    if (selected == -1 || gameOver || board.isDarkTurn() != humanFirst)
         return {};
 
     auto moves{ board.getMoves() };
     int numMoves{ board.getNumMoves() };
     for (int i = 0; i < numMoves; ++i) {
-        if ((selected == 63 - board.getFromSquare(moves[i])) &&
-            (newPos == 63 - board.getToSquare(moves[i]))) {
+        if ((selected == displaySquare(board.getFromSquare(moves[i]), flipBoard)) &&
+            (newPos == displaySquare(board.getToSquare(moves[i]), flipBoard))) {
             board.makeMove(i);
             if (board.isDraw()) {
                 std::cout << "DRAW\n";
                 gameOver = true;
             }
-            if (!board.isDarkTurn()) {
+            if (board.isDarkTurn() != humanFirst) {
                 auto res{ ai.search(1000, false, true) };
                 if (res.pv.empty()) {
                     std::cout << "YOU WIN!\n";
@@ -130,6 +138,21 @@ std::vector<int> attemptToMakeMove(int selected, int newPos, Checkers& board, AI
 }
 
 int main() {
+    bool humanFirst{ true };
+    std::cout << "Do you want to play first? (y/n): ";
+    char input;
+    std::cin >> input;
+    if (input == 'n' || input == 'N') {
+        humanFirst = false;
+    }
+
+    bool flipBoard{ false };
+    std::cout << "Do you want to flip the board? (y/n): ";
+    std::cin >> input;
+    if (input == 'y' || input == 'Y') {
+        flipBoard = true;
+    }
+
     int selected{ -1 };
     constexpr int windowSize{ 8 * squareSize };
     sf::RenderWindow window(sf::VideoMode({ windowSize, windowSize }), "SFML");
@@ -137,7 +160,7 @@ int main() {
     EGTB egtb;
     egtb.buildOrLoad("egtb.bin", "egtb_dtz.bin");
 
-    NNUE nnue{ {128, 256, 32, 1} }; nnue.load("nnue_best.bin");
+    NNUE nnue{ { 128, 256, 32, 1 } }; nnue.load("nnue_best.bin");
     NNUEInference nnueInference{ nnue };
 
     Checkers board{ &nnueInference };
@@ -148,6 +171,11 @@ int main() {
     std::vector<int> aiPendingMoves;
     sf::Clock aiTimer;
     const sf::Time moveDelay{ sf::milliseconds(200) };
+
+    if (!humanFirst) {
+        aiPendingMoves = ai.search(1000, false, true).pv;
+        aiTimer.restart();
+    }
 
     while (window.isOpen()) {
         while (const std::optional event = window.pollEvent()) {
@@ -160,7 +188,8 @@ int main() {
                     int pos{ 8 * (mouseButtonPressed->position.y / squareSize) +
                             (mouseButtonPressed->position.x / squareSize) };
 
-                    std::vector<int> path{ attemptToMakeMove(selected, pos, board, ai, gameOver) };
+                    std::vector<int> path{ attemptToMakeMove(selected, pos, board, ai, gameOver,
+                        humanFirst, flipBoard) };
                     if (!path.empty()) {
                         aiPendingMoves = path;
                         aiTimer.restart();
@@ -200,17 +229,17 @@ int main() {
         displayGrid(window);
 
         if (selected != -1) {
-            sf::RectangleShape selectedRect{ {squareSize, squareSize} };
+            sf::RectangleShape selectedRect{ { squareSize, squareSize } };
             selectedRect.setFillColor(sf::Color::Green);
             selectedRect.setPosition({ static_cast<float>(selected % 8) * squareSize,
                                       static_cast<float>(selected / 8) * squareSize });
 
             window.draw(selectedRect);
 
-            displayValidMoves(board, window, selected);
+            displayValidMoves(board, window, selected, flipBoard);
         }
 
-        displayBoard(board, window);
+        displayBoard(board, window, flipBoard);
 
         window.display();
     }
