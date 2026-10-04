@@ -138,21 +138,6 @@ std::vector<int> attemptToMakeMove(int selected, int newPos, Checkers& board, AI
 }
 
 int main() {
-    bool humanFirst{ true };
-    std::cout << "Do you want to play first? (y/n): ";
-    char input;
-    std::cin >> input;
-    if (input == 'n' || input == 'N') {
-        humanFirst = false;
-    }
-
-    bool flipBoard{ false };
-    std::cout << "Do you want to flip the board? (y/n): ";
-    std::cin >> input;
-    if (input == 'y' || input == 'Y') {
-        flipBoard = true;
-    }
-
     int selected{ -1 };
     constexpr int windowSize{ 8 * squareSize };
     sf::RenderWindow window(sf::VideoMode({ windowSize, windowSize }), "SFML");
@@ -171,6 +156,21 @@ int main() {
     std::vector<int> aiPendingMoves;
     sf::Clock aiTimer;
     const sf::Time moveDelay{ sf::milliseconds(200) };
+
+    bool humanFirst{ true };
+    std::cout << "Do you want to play first? (y/n): ";
+    char input;
+    std::cin >> input;
+    if (input == 'n' || input == 'N') {
+        humanFirst = false;
+    }
+
+    bool flipBoard{ false };
+    std::cout << "Do you want to flip the board? (y/n): ";
+    std::cin >> input;
+    if (input == 'y' || input == 'Y') {
+        flipBoard = true;
+    }
 
     if (!humanFirst) {
         aiPendingMoves = ai.search(1000, false, true).pv;
