@@ -46,6 +46,8 @@
 build/
 Build/
 build-*/
+training-backups/
+training-runs/
 
 # CMake generated files
 CMakeFiles/

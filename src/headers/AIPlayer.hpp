@@ -122,7 +122,8 @@ private:
             int score;
             if (board.makeMove(i)) {
                 m_nodesHit++;
-                score = -quiscence(-beta, -alpha, board, ply + 1);
+                score = quiscence(-beta, -alpha, board, ply + 1);
+                if (score != searchAborted) score = -score;
             }
             else {
                 score = quiscence(alpha, beta, board, ply);
@@ -210,7 +211,8 @@ private:
 
                 if (turnSwitched) {
                     m_nodesHit++;
-                    score = -negamax(-beta, -alpha, depth - 1, board, childPV, ply + 1);
+                    score = negamax(-beta, -alpha, depth - 1, board, childPV, ply + 1);
+                    if (score != searchAborted) score = -score;
                 }
                 else {
                     score = negamax(alpha, beta, depth, board, childPV, ply);
@@ -233,6 +235,8 @@ private:
                 if (alpha >= beta)
                     break;
             }
+            if (alpha >= beta)
+                break;
         }
 
         int val{ bestVal };
@@ -370,15 +374,15 @@ public:
         return { score, completedPV, completedDepth };
     }
 
-    int getNodesHit() {
+    int getNodesHit() const {
         return m_nodesHit;
     }
 
-    int getHashCollisions() {
+    int getHashCollisions() const {
         return m_hashCollisions;
     }
 
-    int getEgtbHits() {
+    int getEgtbHits() const {
         return m_egtbHits;
     }
 
@@ -386,15 +390,15 @@ public:
         std::fill(tt.begin(), tt.end(), TTEntry{ 0, -1, 0, -1, 0 });
     }
 
-    int getTTProbes() {
+    int getTTProbes() const {
         return m_ttProbes;
     }
 
-    int getTTUsefulHits() {
+    int getTTUsefulHits() const {
         return m_ttUsefulHits;
     }
 
-    int getTTCutoffs() {
+    int getTTCutoffs() const {
         return m_ttCutoffs;
     }
 };

@@ -205,7 +205,9 @@ public:
             fs::create_directories(filepath.parent_path());
         }
 
-        std::ofstream out(filename, std::ios::binary);
+        fs::path temp{ filepath };
+        temp += ".tmp";
+        std::ofstream out(temp, std::ios::binary);
         if (!out) throw std::runtime_error("Failed to open file for saving: " + filename);
 
         out.write(reinterpret_cast<const char*>(&trainGames), sizeof(int));
@@ -221,6 +223,8 @@ public:
         m_outputLayer.save(out);
 
         out.close();
+        if (!out) throw std::runtime_error("Failed to write checkpoint: " + filename);
+        fs::rename(temp, filepath);
         std::cout << "Checkpoint saved: " << filename << std::endl;
     }
 
@@ -229,11 +233,13 @@ public:
         if (!in) throw std::runtime_error("Failed to open file for loading: " + filename);
 
         in.read(reinterpret_cast<char*>(&trainGames), sizeof(int));
+        if (!in) throw std::runtime_error("Checkpoint header truncated: " + filename);
 
         m_accumulator.load(in);
 
         int numHidden;
         in.read(reinterpret_cast<char*>(&numHidden), sizeof(int));
+        if (!in) throw std::runtime_error("Checkpoint layer count truncated: " + filename);
 
         if (numHidden != m_hiddenLayers.size()) {
             throw std::runtime_error("Checkpoint layer count mismatch!");
@@ -244,6 +250,7 @@ public:
         }
 
         m_outputLayer.load(in);
+        if (!in) throw std::runtime_error("Checkpoint truncated: " + filename);
 
         in.close();
         std::cout << "Checkpoint loaded: " << filename << " (Step: " << trainGames << ")" << std::endl;

@@ -123,7 +123,8 @@ namespace v1 {
                 int score;
                 if (board.makeMove(i)) {
                     m_nodesHit++;
-                    score = -quiscence(-beta, -alpha, board, ply + 1);
+                    score = quiscence(-beta, -alpha, board, ply + 1);
+                    if (score != searchAborted) score = -score;
                 }
                 else {
                     score = quiscence(alpha, beta, board, ply);
@@ -211,7 +212,8 @@ namespace v1 {
 
                     if (turnSwitched) {
                         m_nodesHit++;
-                        score = -negamax(-beta, -alpha, depth - 1, board, childPV, ply + 1);
+                        score = negamax(-beta, -alpha, depth - 1, board, childPV, ply + 1);
+                        if (score != searchAborted) score = -score;
                     }
                     else {
                         score = negamax(alpha, beta, depth, board, childPV, ply);
@@ -234,6 +236,8 @@ namespace v1 {
                     if (alpha >= beta)
                         break;
                 }
+                if (alpha >= beta)
+                    break;
             }
 
             int val{ bestVal };

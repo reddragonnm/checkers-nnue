@@ -9,7 +9,7 @@
 #include "headers/NNUEInference.hpp"
 
 constexpr int squareSize{ 100 };
-constexpr int searchTime{ 2000 }; // milliseconds
+constexpr int searchTime{ 3000 }; // milliseconds
 
 int displaySquare(int square, bool flipBoard) {
     return flipBoard ? square : 63 - square;

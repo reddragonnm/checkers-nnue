@@ -76,11 +76,11 @@ struct Buffer {
 NNUE loadNNUE(const std::string& dir) {
     std::ifstream infile{ dir + "/nnue_latest.bin", std::ios::binary };
     if (infile.good()) {
-        NNUE nnue{ {128, 256, 32, 1} };
+        NNUE nnue{ { 128, 256, 32, 1 } };
         nnue.load(dir + "/nnue_latest.bin");
         return nnue;
     }
-    return NNUE{ {128, 256, 32, 1} };
+    return NNUE{ { 128, 256, 32, 1 } };
 }
 
 std::bitset<128> encodeBoard(const Checkers& board) {
@@ -94,30 +94,53 @@ std::bitset<128> encodeBoard(const Checkers& board) {
     return features;
 }
 
-void eloCheck(const std::string& v1, const std::string& v2) {
-    Checkers board{};
-
-    EGTB egtb;
-    egtb.buildOrLoad("egtb.bin", "egtb_dtz.bin");
-
-    NNUE nnueV1{ {128, 256, 32, 1} }; nnueV1.load(v1);
-    NNUE nnueV2{ {128, 256, 32, 1} }; nnueV2.load(v2);
+void eloCheck(EGTB& egtb, const std::string& v1, const std::string& v2) {
+    NNUE nnueV1{ { 128, 256, 32, 1 } }; nnueV1.load(v1);
+    NNUE nnueV2{ { 128, 256, 32, 1 } }; nnueV2.load(v2);
 
     NNUEInference nnueInferenceV1{ nnueV1 };
     NNUEInference nnueInferenceV2{ nnueV2 };
 
+    Checkers board{ &nnueInferenceV1 };
+    Checkers board2{ &nnueInferenceV2 };
     auto v1Player{ AIPlayer(board, egtb, nnueInferenceV1) };
-    auto v2Player{ AIPlayer(board, egtb, nnueInferenceV2) };
+    auto v2Player{ AIPlayer(board2, egtb, nnueInferenceV2) };
 
     int v1Wins{ 0 };
     int v2Wins{ 0 };
     int draws{ 0 };
+    std::mt19937_64 openingRng{ 42 };
+    std::vector<int> opening;
 
     for (int i{ 0 }; i < eloEvalGames; i++) {
         bool v1IsDark{ i % 2 == 0 };
         int numMoves{ 0 };
 
+        if (v1IsDark) {
+            opening.clear();
+            for (int turn{ 0 }; turn < 8 && board.getNumMoves() > 0 && !board.isDraw(); turn++) {
+                bool switched;
+                do {
+                    std::uniform_int_distribution<int> dist(0, board.getNumMoves() - 1);
+                    int move{ dist(openingRng) };
+                    opening.push_back(move);
+                    switched = board.makeMove(move);
+                    board2.makeMove(move);
+                } while (!switched);
+            }
+        }
+        else {
+            for (int move : opening) {
+                board.makeMove(move);
+                board2.makeMove(move);
+            }
+        }
+
         while (true) {
+            if (board.isDraw()) {
+                draws++;
+                break;
+            }
             bool isV1Turn = (board.isDarkTurn() == v1IsDark);
 
             SearchResult res;
@@ -132,7 +155,10 @@ void eloCheck(const std::string& v1, const std::string& v2) {
                 break;
             }
 
-            for (int m : res.pv) board.makeMove(m);
+            for (int m : res.pv) {
+                board.makeMove(m);
+                board2.makeMove(m);
+            }
 
             if (board.isDraw()) {
                 draws++;
@@ -145,6 +171,7 @@ void eloCheck(const std::string& v1, const std::string& v2) {
 
         std::cout << "Game " << i + 1 << ": V1 Wins: " << v1Wins << " V2 Wins: " << v2Wins << " Draws: " << draws << "\n";
         board.reset();
+        board2.reset();
         v1Player.resetTT();
         v2Player.resetTT();
     }
@@ -174,7 +201,7 @@ int main() {
     NNUE nnue{ loadNNUE("checkpoints") };
     NNUEInference nnueInference{ nnue };
 
-    Checkers board{};
+    Checkers board{ &nnueInference };
     AIPlayer ai{ board, egtb, nnueInference };
 
     Buffer buffer{}; // dark perspective only
@@ -264,7 +291,7 @@ int main() {
 
             if (nnue.trainGames != checkpointEvery) { // skip first
                 std::cout << "Starting ELO evaluation\n";
-                eloCheck("checkpoints/nnue_" + std::to_string(nnue.trainGames) + ".bin", "checkpoints/nnue_" + std::to_string(nnue.trainGames - checkpointEvery) + ".bin");
+                eloCheck(egtb, "checkpoints/nnue_" + std::to_string(nnue.trainGames) + ".bin", "checkpoints/nnue_" + std::to_string(nnue.trainGames - checkpointEvery) + ".bin");
             }
         }
         std::cout << "\n";

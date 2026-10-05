@@ -151,11 +151,10 @@ public:
         int rows, cols;
         in.read(reinterpret_cast<char*>(&rows), sizeof(rows));
         in.read(reinterpret_cast<char*>(&cols), sizeof(cols));
-
-        m_rows = rows;
-        m_cols = cols;
-        m_data.assign(m_rows * m_cols, 0.0f);
+        if (!in || rows != m_rows || cols != m_cols)
+            throw std::runtime_error("Matrix load dimensions mismatch");
 
         in.read(reinterpret_cast<char*>(m_data.data()), m_data.size() * sizeof(float));
+        if (!in) throw std::runtime_error("Matrix load truncated");
     }
 };
