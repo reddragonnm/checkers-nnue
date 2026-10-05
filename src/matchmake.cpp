@@ -11,7 +11,7 @@
 #include "headers/NNUEInference.hpp"
 
 #include "matchmaking/v1.hpp"
-#include "matchmaking/v3.hpp"
+#include "matchmaking/v2.hpp"
 
 constexpr int squareSize{ 100 };
 
@@ -91,7 +91,7 @@ int main() {
     int draws{ 0 };
 
     auto v1Player{ v1::AIPlayer(board1, egtb, nnueInferenceV1) };
-    auto v2Player{ v3::AIPlayer(board2, egtb, nnueInferenceV2) }; // piece eval
+    auto v2Player{ v2::AIPlayer(board2, egtb, nnueInferenceV2) };
 
 
     for (int i{ 0 }; i < 1000; i++) {

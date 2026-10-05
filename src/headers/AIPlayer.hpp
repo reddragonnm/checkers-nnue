@@ -113,13 +113,10 @@ private:
         if (tbScore != searchAborted)
             return tbScore;
 
-        int eval{ evaluate(board) };
-        if (eval >= beta)
-            return beta;
-        alpha = std::max(alpha, eval);
-
         if (!board.isCaptureMove(board.getMoves()[0]))
-            return eval;
+            return evaluate(board);
+
+        int eval{ -infinity };
 
         for (int i{ 0 }; i < numMoves; i++) {
             int score;
