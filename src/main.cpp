@@ -9,9 +9,19 @@
 #include "headers/NNUEInference.hpp"
 
 constexpr int squareSize{ 100 };
+constexpr int searchTime{ 5000 }; // milliseconds
 
 int displaySquare(int square, bool flipBoard) {
     return flipBoard ? square : 63 - square;
+}
+
+void logMove(const char* player, const Checkers& board, int index, std::uint16_t move) {
+    std::cout << "MOVE " << player << " index=" << index
+        << " from=" << board.getFromSquare(move)
+        << " to=" << board.getToSquare(move)
+        << " capture=" << board.isCaptureMove(move)
+        << " hash=" << board.hash()
+        << " drawCounter=" << board.getDrawCounter() << '\n';
 }
 
 void displayGrid(sf::RenderWindow& window) {
@@ -117,12 +127,14 @@ std::vector<int> attemptToMakeMove(int selected, int newPos, Checkers& board, AI
         if ((selected == displaySquare(board.getFromSquare(moves[i]), flipBoard)) &&
             (newPos == displaySquare(board.getToSquare(moves[i]), flipBoard))) {
             board.makeMove(i);
+            logMove("human", board, i, moves[i]);
             if (board.isDraw()) {
                 std::cout << "DRAW\n";
                 gameOver = true;
+                return {};
             }
             if (board.isDarkTurn() != humanFirst) {
-                auto res{ ai.search(1000, false, true) };
+                auto res{ ai.search(searchTime, false, true) };
                 if (res.pv.empty()) {
                     std::cout << "YOU WIN!\n";
                     gameOver = true;
@@ -171,9 +183,10 @@ int main() {
     if (input == 'y' || input == 'Y') {
         flipBoard = true;
     }
+    std::cout << "Move log uses engine square numbers 0-63. Initial hash=" << board.hash() << '\n';
 
     if (!humanFirst) {
-        aiPendingMoves = ai.search(1000, false, true).pv;
+        aiPendingMoves = ai.search(searchTime, false, true).pv;
         aiTimer.restart();
     }
 
@@ -204,13 +217,17 @@ int main() {
             if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
                 if (keyPressed->code == sf::Keyboard::Key::U) {
                     board.undoMove();
+                    std::cout << "UNDO hash=" << board.hash() << '\n';
                     gameOver = false;
                 }
             }
         }
 
         if (!aiPendingMoves.empty() && aiTimer.getElapsedTime() > moveDelay) {
-            board.makeMove(aiPendingMoves.front());
+            int index = aiPendingMoves.front();
+            auto move = board.getMoves()[index];
+            board.makeMove(index);
+            logMove("ai", board, index, move);
             aiPendingMoves.erase(aiPendingMoves.begin());
             aiTimer.restart();
 

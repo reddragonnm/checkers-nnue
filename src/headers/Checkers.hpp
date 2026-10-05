@@ -35,6 +35,8 @@ struct State {
     bool darkTurn;
     bool midCapture;
     std::uint64_t hash;
+    std::uint64_t repetitionKey;
+    bool repeatedPosition;
 
     AccumulatorState accumulatorState;
 };
@@ -58,6 +60,8 @@ private:
     std::uint64_t m_zobristMidCapture;
 
     std::uint64_t m_hash;
+    std::uint64_t m_repetitionKey{ 0 };
+    bool m_repeatedPosition{ false };
 
     std::uint64_t m_unoccupied;
     std::uint64_t m_oppPieces;
@@ -65,6 +69,14 @@ private:
     std::vector<State> m_history;
 
     NNUEInference* m_nnue{ nullptr };
+
+    static std::uint64_t mixHash(std::uint64_t x) {
+        x ^= x >> 30;
+        x *= 0xbf58476d1ce4e5b9ULL;
+        x ^= x >> 27;
+        x *= 0x94d049bb133111ebULL;
+        return x ^ (x >> 31);
+    }
 
     void initZobrist() {
         std::mt19937_64 rng(42);
@@ -214,6 +226,18 @@ private:
 
     void generateMoves() {
         assert(m_hash == computeHash());
+        if (m_drawCounter == 0) {
+            m_repetitionKey = 0;
+            m_repeatedPosition = false;
+        }
+        else if (!m_repeatedPosition) {
+            for (int i = static_cast<int>(m_history.size()) - 1, n = m_drawCounter; i >= 0 && n > 0; --i, --n) {
+                if (m_history[i].hash == m_hash) {
+                    m_repeatedPosition = true;
+                    break;
+                }
+            }
+        }
         regenCache();
 
         if (m_darkTurn) {
@@ -283,6 +307,8 @@ public:
         m_kingPieces = 0;
         m_moveCounter = 0;
         m_drawCounter = 0;
+        m_repetitionKey = 0;
+        m_repeatedPosition = false;
         m_darkTurn = true;
         m_midCapture = false;
 
@@ -306,6 +332,8 @@ public:
         m_darkTurn = state.darkTurn;
         m_midCapture = state.midCapture;
         m_hash = state.hash;
+        m_repetitionKey = state.repetitionKey;
+        m_repeatedPosition = state.repeatedPosition;
         if (m_nnue)
             m_nnue->setAccumulatorState(state.accumulatorState);
     }
@@ -322,7 +350,9 @@ public:
         assert(moveIdx >= 0 && moveIdx < m_moveCounter);
 
         m_history.emplace_back(m_darkPieces, m_lightPieces, m_kingPieces, m_moves, m_moveCounter,
-            m_drawCounter, m_darkTurn, m_midCapture, m_hash, m_nnue ? m_nnue->getAccumulatorState() : AccumulatorState{});
+            m_drawCounter, m_darkTurn, m_midCapture, m_hash, m_repetitionKey, m_repeatedPosition,
+            m_nnue ? m_nnue->getAccumulatorState() : AccumulatorState{});
+        m_repetitionKey += mixHash(m_hash);
 
         if (m_midCapture) {
             m_midCapture = false;
@@ -516,6 +546,8 @@ public:
 
         m_midCapture = true;
         m_hash ^= m_zobristMidCapture;
+        m_repetitionKey = 0;
+        m_repeatedPosition = false;
 
         assert(m_hash == computeHash());
         return false;
@@ -523,6 +555,14 @@ public:
 
     std::uint64_t hash() const {
         return m_hash;
+    }
+
+    std::uint64_t searchHash() const {
+        return m_hash ^ mixHash(m_repetitionKey ^ static_cast<std::uint64_t>(m_drawCounter));
+    }
+
+    bool hasRepeatedPosition() const {
+        return m_repeatedPosition;
     }
 
     bool isThreefoldRepetition() const {

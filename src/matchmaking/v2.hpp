@@ -4,7 +4,6 @@
 #include <chrono>
 #include <iostream>
 #include <limits>
-#include <map>
 
 #include "../headers/Checkers.hpp"
 #include "../headers/EGTB.hpp"

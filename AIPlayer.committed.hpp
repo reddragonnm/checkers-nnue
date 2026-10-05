@@ -71,9 +71,6 @@ private:
     }
 
     int probeTablebaseScore(Checkers& board) {
-        if (board.hasRepeatedPosition())
-            return searchAborted;
-
         if (std::popcount(board.getDarkPieces()) + std::popcount(board.getLightPieces()) > 5)
             return searchAborted;
 
@@ -87,10 +84,7 @@ private:
             return 0;
 
         int dtz{ m_egtb.probeDTZ(board) };
-        if (dtz >= 0 && board.getDrawCounter() + dtz >= 80)
-            return searchAborted;
-        // After a capture or promotion, the table records distance to the next reset.
-        int distance{ board.getDrawCounter() == 0 ? 1 : (dtz >= 0 ? dtz : (infinityThreshold - 1)) };
+        int distance{ dtz >= 0 ? dtz : (infinityThreshold - 1) };
         distance = std::clamp(distance, 1, infinityThreshold - 1);
 
         if (result == WDL::WIN)
@@ -103,12 +97,6 @@ private:
         if (shouldStop())
             return searchAborted;
 
-        if (board.isDraw())
-            return 0;
-        const int numMoves{ board.getNumMoves() };
-        if (numMoves == 0)
-            return -infinity + ply;
-
         int tbScore{ probeTablebaseScore(board) };
         if (tbScore != searchAborted)
             return tbScore;
@@ -118,8 +106,14 @@ private:
             return beta;
         alpha = std::max(alpha, eval);
 
+        const int numMoves{ board.getNumMoves() };
         if (!board.isCaptureMove(board.getMoves()[0]))
             return eval;
+
+        if (board.isDraw())
+            return 0;
+        if (numMoves == 0)
+            return -infinity + ply;
 
         for (int i{ 0 }; i < numMoves; i++) {
             int score;
@@ -159,7 +153,7 @@ private:
                 return tbScore;
         }
 
-        std::uint64_t hash{ board.searchHash() };
+        std::uint64_t hash{ board.hash() };
         TTEntry& entry{ tt[hash & (ttSize - 1)] };
 
         if (entry.key != 0 && entry.key != hash)
@@ -176,11 +170,18 @@ private:
             if (score > infinity - infinityThreshold) score -= ply;
             else if (score < -infinity + infinityThreshold) score += ply;
 
-            if (entry.flag == TTExact || (entry.flag == TTLower && score >= beta)
-                || (entry.flag == TTUpper && score <= alpha)) {
+            if (entry.flag == TTExact) {
                 m_ttCutoffs++;
-                if (entry.move >= 0 && entry.move < board.getNumMoves())
-                    pv.push_back(entry.move);
+                return score;
+            }
+
+            if (entry.flag == TTLower && score >= beta) {
+                m_ttCutoffs++;
+                return score;
+            }
+
+            if (entry.flag == TTUpper && score <= alpha) {
+                m_ttCutoffs++;
                 return score;
             }
         }
@@ -270,9 +271,8 @@ private:
 
         while (!switched && m_board.getNumMoves() > 0) {
             int move = 0;
-            std::uint64_t hash = m_board.searchHash();
-            TTEntry& e = tt[hash & (ttSize - 1)];
-            if (e.key == hash && e.move >= 0 && e.move < m_board.getNumMoves())
+            TTEntry& e = tt[m_board.hash() & (ttSize - 1)];
+            if (e.key == m_board.hash() && e.move >= 0 && e.move < m_board.getNumMoves())
                 move = e.move;
             pv.push_back(move);
             switched = m_board.makeMove(move);

@@ -89,9 +89,9 @@ Multi-jump captures require special treatment throughout the search. When a move
 
 ### EGTB Integration
 
-When the total number of pieces on the board drops to five or fewer, the search probes the endgame tablebase at every node (except the root). A tablebase win returns a score that reflects how quickly the win can be forced — shorter paths score higher. A tablebase loss returns a score that reflects how long the loss can be delayed — longer resistance scores higher. A tablebase draw returns zero, and the search continues normally from the root to find the best drawing move rather than returning immediately.
+When the total number of pieces on the board drops to five or fewer, the search probes the endgame tablebase at non-root nodes unless the reversible history already contains a repeated position. It also searches instead of using a tablebase win or loss when the distance to the next zeroing move reaches the 80-ply draw limit. A tablebase win returns a score that reflects how quickly the win can be forced — shorter paths score higher. A tablebase loss returns a score that reflects how long the loss can be delayed — longer resistance scores higher. A tablebase draw returns zero, and the search continues normally from the root to find the best drawing move rather than returning immediately.
 
-This design means the engine plays perfectly in all ≤5-piece endings and uses the tablebase to guide move selection even when the material is not yet reduced to tablebase range — a position that leads to a forced tablebase win in fewer moves scores higher than one that takes longer.
+The tablebase guides move selection in endings with five or fewer pieces and in lines that reach them. Repetition history and the draw counter can change the practical result, so the search handles those positions directly.
 
 ### Principal Variation
 

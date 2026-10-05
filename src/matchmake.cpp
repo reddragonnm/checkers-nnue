@@ -11,12 +11,12 @@
 #include "headers/NNUEInference.hpp"
 
 #include "matchmaking/v1.hpp"
-#include "matchmaking/v2.hpp"
+#include "matchmaking/v3.hpp"
 
 constexpr int squareSize{ 100 };
 
 void displayGrid(sf::RenderWindow& window) {
-    static sf::RectangleShape rect{ {squareSize, squareSize} };
+    static sf::RectangleShape rect{ { squareSize, squareSize } };
 
     for (int i{ 0 }; i < 8; ++i) {
         for (int j{ 0 }; j < 8; ++j) {
@@ -77,10 +77,10 @@ int main() {
     EGTB egtb;
     egtb.buildOrLoad("egtb.bin", "egtb_dtz.bin");
 
-    NNUE nnueV1{ {128, 256, 32, 1} }; nnueV1.load("nnue_best.bin");
+    NNUE nnueV1{ { 128, 256, 32, 1 } }; nnueV1.load("nnue_best.bin");
     NNUEInference nnueInferenceV1{ nnueV1 };
 
-    NNUE nnueV2{ {128, 256, 32, 1} }; nnueV2.load("nnue_best.bin");
+    NNUE nnueV2{ { 128, 256, 32, 1 } }; nnueV2.load("nnue_best.bin");
     NNUEInference nnueInferenceV2{ nnueV2 };
 
     Checkers board1{ &nnueInferenceV1 };
@@ -91,7 +91,7 @@ int main() {
     int draws{ 0 };
 
     auto v1Player{ v1::AIPlayer(board1, egtb, nnueInferenceV1) };
-    auto v2Player{ v2::AIPlayer(board2, egtb, nnueInferenceV2) }; // piece eval
+    auto v2Player{ v3::AIPlayer(board2, egtb, nnueInferenceV2) }; // piece eval
 
 
     for (int i{ 0 }; i < 1000; i++) {
@@ -112,10 +112,17 @@ int main() {
             bool isV1Turn = (board1.isDarkTurn() == v1IsDark);
 
             if (isV1Turn)
-                std::tie(score, moves) = v1Player.search(100, false);
+            {
+                auto res = v1Player.search(100, false);
+                score = res.score;
+                moves = res.pv;
+            }
             else
-                std::tie(score, moves) = v2Player.search(100, false);
-
+            {
+                auto res = v2Player.search(100, false);
+                score = res.score;
+                moves = res.pv;
+            }
             if (moves.empty()) {
                 if (isV1Turn) v2Wins++;
                 else v1Wins++;

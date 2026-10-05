@@ -9,8 +9,8 @@
 #include "../headers/EGTB.hpp"
 #include "../headers/NNUEInference.hpp"
 
+namespace v3 {
 
-namespace v1 {
     constexpr int infinity{ 300 };
     constexpr int infinityThreshold{ 50 };
     constexpr int searchAborted{ std::numeric_limits<int>::min() / 2 };
@@ -73,6 +73,9 @@ namespace v1 {
         }
 
         int probeTablebaseScore(Checkers& board) {
+            if (board.hasRepeatedPosition())
+                return searchAborted;
+
             if (std::popcount(board.getDarkPieces()) + std::popcount(board.getLightPieces()) > 5)
                 return searchAborted;
 
@@ -86,6 +89,8 @@ namespace v1 {
                 return 0;
 
             int dtz{ m_egtb.probeDTZ(board) };
+            if (dtz >= 0 && board.getDrawCounter() + dtz >= 80)
+                return searchAborted;
             int distance{ dtz >= 0 ? dtz : (infinityThreshold - 1) };
             distance = std::clamp(distance, 1, infinityThreshold - 1);
 
@@ -99,6 +104,12 @@ namespace v1 {
             if (shouldStop())
                 return searchAborted;
 
+            if (board.isDraw())
+                return 0;
+            const int numMoves{ board.getNumMoves() };
+            if (numMoves == 0)
+                return -infinity + ply;
+
             int tbScore{ probeTablebaseScore(board) };
             if (tbScore != searchAborted)
                 return tbScore;
@@ -108,14 +119,8 @@ namespace v1 {
                 return beta;
             alpha = std::max(alpha, eval);
 
-            const int numMoves{ board.getNumMoves() };
             if (!board.isCaptureMove(board.getMoves()[0]))
                 return eval;
-
-            if (board.isDraw())
-                return 0;
-            if (numMoves == 0)
-                return -infinity + ply;
 
             for (int i{ 0 }; i < numMoves; i++) {
                 int score;
@@ -155,7 +160,7 @@ namespace v1 {
                     return tbScore;
             }
 
-            std::uint64_t hash{ board.hash() };
+            std::uint64_t hash{ board.searchHash() };
             TTEntry& entry{ tt[hash & (ttSize - 1)] };
 
             if (entry.key != 0 && entry.key != hash)
@@ -172,18 +177,11 @@ namespace v1 {
                 if (score > infinity - infinityThreshold) score -= ply;
                 else if (score < -infinity + infinityThreshold) score += ply;
 
-                if (entry.flag == TTExact) {
+                if (entry.flag == TTExact || (entry.flag == TTLower && score >= beta)
+                    || (entry.flag == TTUpper && score <= alpha)) {
                     m_ttCutoffs++;
-                    return score;
-                }
-
-                if (entry.flag == TTLower && score >= beta) {
-                    m_ttCutoffs++;
-                    return score;
-                }
-
-                if (entry.flag == TTUpper && score <= alpha) {
-                    m_ttCutoffs++;
+                    if (entry.move >= 0 && entry.move < board.getNumMoves())
+                        pv.push_back(entry.move);
                     return score;
                 }
             }
@@ -273,8 +271,9 @@ namespace v1 {
 
             while (!switched && m_board.getNumMoves() > 0) {
                 int move = 0;
-                TTEntry& e = tt[m_board.hash() & (ttSize - 1)];
-                if (e.key == m_board.hash() && e.move >= 0 && e.move < m_board.getNumMoves())
+                std::uint64_t hash = m_board.searchHash();
+                TTEntry& e = tt[hash & (ttSize - 1)];
+                if (e.key == hash && e.move >= 0 && e.move < m_board.getNumMoves())
                     move = e.move;
                 pv.push_back(move);
                 switched = m_board.makeMove(move);
