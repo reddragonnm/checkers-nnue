@@ -30,11 +30,11 @@ namespace v2 {
         int completedDepth;
     };
 
-    #ifdef __EMSCRIPTEN__
+#ifdef __EMSCRIPTEN__
     constexpr int ttSize{ 1 << 20 };
-    #else
+#else
     constexpr int ttSize{ 1 << 24 };
-    #endif
+#endif
 
     class AIPlayer {
     private:

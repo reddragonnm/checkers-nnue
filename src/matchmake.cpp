@@ -77,10 +77,10 @@ int main() {
     EGTB egtb;
     egtb.buildOrLoad("egtb.bin", "egtb_dtz.bin");
 
-    NNUE nnueV1{ { 128, 256, 32, 1 } }; nnueV1.load("nnue_best.bin");
+    NNUE nnueV1{ { 128, 256, 32, 1 } }; nnueV1.load("nnue_21000.bin");
     NNUEInference nnueInferenceV1{ nnueV1 };
 
-    NNUE nnueV2{ { 128, 256, 32, 1 } }; nnueV2.load("nnue_best.bin");
+    NNUE nnueV2{ { 128, 256, 32, 1 } }; nnueV2.load("nnue_16000.bin");
     NNUEInference nnueInferenceV2{ nnueV2 };
 
     Checkers board1{ &nnueInferenceV1 };
@@ -91,7 +91,7 @@ int main() {
     int draws{ 0 };
 
     auto v1Player{ v1::AIPlayer(board1, egtb, nnueInferenceV1) };
-    auto v2Player{ v2::AIPlayer(board2, egtb, nnueInferenceV2) };
+    auto v2Player{ v1::AIPlayer(board2, egtb, nnueInferenceV2) };
 
 
     for (int i{ 0 }; i < 1000; i++) {

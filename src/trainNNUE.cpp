@@ -1,6 +1,11 @@
 #include <iostream>
 #include <random>
 #include <bitset>
+#include <cmath>
+#include <fstream>
+#include <optional>
+#include <regex>
+#include <string>
 
 #include "headers/NNUE.hpp"
 #include "headers/NNUEInference.hpp"
@@ -16,6 +21,7 @@ constexpr int trainStepsPerGame{ 32 };
 constexpr int trainSearchDepth{ 6 };
 
 constexpr float exploreRate{ 0.15f };
+constexpr float gameResultWeight{ 0.25f };
 
 constexpr float lr{ 0.001f };
 
@@ -38,13 +44,16 @@ struct Buffer {
         data.reserve(bufferCapacity);
     }
 
-    void add(const std::bitset<128>& features, float target) {
+    int add(const std::bitset<128>& features, float target) {
         if (data.size() < bufferCapacity) {
             data.push_back({ features, target });
+            return static_cast<int>(data.size()) - 1;
         }
         else {
-            data[index] = { features, target };
+            const int slot{ index };
+            data[slot] = { features, target };
             index = (index + 1) % bufferCapacity;
+            return slot;
         }
     };
 
@@ -73,13 +82,44 @@ struct Buffer {
     }
 };
 
-NNUE loadNNUE(const std::string& dir) {
-    std::ifstream infile{ dir + "/nnue_latest.bin", std::ios::binary };
-    if (infile.good()) {
-        NNUE nnue{ { 128, 256, 32, 1 } };
-        nnue.load(dir + "/nnue_latest.bin");
-        return nnue;
+void blendGameResult(Buffer& buffer, const std::vector<std::pair<int, bool>>& positions, float darkResult) {
+    for (const auto& [slot, darkToMove] : positions) {
+        float result{ darkToMove ? darkResult : -darkResult };
+        buffer.data[slot].target = (1.f - gameResultWeight) * buffer.data[slot].target
+            + gameResultWeight * result;
     }
+}
+
+NNUE loadNNUE(const std::string& dir, std::ostream* log = nullptr) {
+    const fs::path latest{ fs::path(dir) / "nnue_latest.bin" };
+    auto loadIfFinite = [log](const fs::path& path) -> std::optional<NNUE> {
+        NNUE nnue{ { 128, 256, 32, 1 } };
+        std::string reason{ "non-finite model" };
+        try {
+            nnue.load(path.string());
+            if (nnue.isFinite()) return nnue;
+        }
+        catch (const std::runtime_error& e) { reason = e.what(); }
+        std::cerr << "Skipping invalid checkpoint: " << path << " (" << reason << ")\n";
+        if (log) *log << "invalid_checkpoint path=" << path << " reason=" << reason << std::endl;
+        return std::nullopt;
+    };
+    if (fs::exists(latest)) {
+        if (auto nnue = loadIfFinite(latest)) return std::move(*nnue);
+    }
+    std::vector<std::pair<int, fs::path>> checkpoints;
+    const std::regex numbered{ R"(nnue_([0-9]+)\.bin)" };
+    if (fs::exists(dir)) for (const auto& entry : fs::directory_iterator(dir)) {
+        std::smatch match;
+        const std::string name{ entry.path().filename().string() };
+        if (std::regex_match(name, match, numbered))
+            checkpoints.emplace_back(std::stoi(match[1].str()), entry.path());
+    }
+    std::sort(checkpoints.rbegin(), checkpoints.rend());
+    for (const auto& [step, path] : checkpoints)
+        if (auto nnue = loadIfFinite(path)) return std::move(*nnue);
+    if (fs::exists(latest) || !checkpoints.empty())
+        throw std::runtime_error("No finite NNUE checkpoint is available");
     return NNUE{ { 128, 256, 32, 1 } };
 }
 
@@ -194,11 +234,35 @@ float calculateMSE(const Matrix& output, const Matrix& target) {
     return totalError / n;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    if (argc != 3 || std::string(argv[1]) != "--run-dir") {
+        std::cerr << "Usage: trainNNUE --run-dir <directory>\n";
+        return 2;
+    }
+    const fs::path runDir{ fs::absolute(argv[2]) };
+    const fs::path checkpointDir{ runDir / "checkpoints" };
+    fs::create_directories(runDir);
+    std::ofstream trainLog(runDir / "train.log", std::ios::app);
+    if (!trainLog) throw std::runtime_error("Cannot open training log");
+    auto logLine = [&](const std::string& line) {
+        std::cout << line << '\n';
+        trainLog << line << std::endl;
+    };
+    logLine("run_dir=" + runDir.string() + " selfplay_rng_seed=42 initial_weights=random_device architecture=128,256,32,1"
+            + " depth=" + std::to_string(trainSearchDepth) + " lr=" + std::to_string(lr)
+            + " batch=" + std::to_string(batchSize) + " steps_per_game=" + std::to_string(trainStepsPerGame)
+            + " game_result_weight=" + std::to_string(gameResultWeight));
+
     EGTB egtb;
     egtb.buildOrLoad("egtb.bin", "egtb_dtz.bin");
 
-    NNUE nnue{ loadNNUE("checkpoints") };
+    const bool freshRun{ !fs::exists(checkpointDir) || fs::is_empty(checkpointDir) };
+    NNUE nnue{ loadNNUE(checkpointDir.string(), &trainLog) };
+    if (freshRun) {
+        nnue.save((checkpointDir / "nnue_0.bin").string());
+        logLine("initial_checkpoint=" + (checkpointDir / "nnue_0.bin").string());
+    }
+    logLine("starting_step=" + std::to_string(nnue.trainGames));
     NNUEInference nnueInference{ nnue };
 
     Checkers board{ &nnueInference };
@@ -226,7 +290,7 @@ int main() {
             board.makeMove(dist(rng)); // all random moves so we don't care about capture sequences or even color to move
         }
     }
-    std::cout << "Warmup complete, buffer: " << buffer.size() << " positions\n";
+    logLine("warmup_complete buffer=" + std::to_string(buffer.size()));
 
     // main loop
     std::uniform_real_distribution<float> uniformDist(0.f, 1.f);
@@ -235,13 +299,14 @@ int main() {
         std::cout << "Starting game " << nnue.trainGames << "\n";
         board.reset();
         ai.resetTT();
+        std::vector<std::pair<int, bool>> gamePositions;
 
         while (board.getNumMoves() > 0 && !board.isDraw()) {
             auto features{ encodeBoard(board) };
 
             auto [score, pv, _] { ai.search(trainSearchDepth) };
 
-            buffer.add(features, static_cast<float>(score) / infinity);
+            gamePositions.emplace_back(buffer.add(features, static_cast<float>(score) / infinity), board.isDarkTurn());
 
             if (uniformDist(rng) < exploreRate) {
                 while (true) {
@@ -264,34 +329,76 @@ int main() {
         else std::cout << "Dark wins\n";
         std::cout << "Buffer size: " << buffer.size() << "\n";
 
+        const float darkResult{ board.isDraw() ? 0.f : (board.isDarkTurn() ? -1.f : 1.f) };
+        blendGameResult(buffer, gamePositions, darkResult);
+
         // training
         float avgMSE{ 0.f };
+        int completedSteps{ 0 };
         for (int step{ 0 }; step < trainStepsPerGame; step++) {
             auto [features, targets] { buffer.sampleBatch(batchSize) };
-            Matrix output{ nnue.forward(features) };
+            Matrix output;
+            try {
+                output = nnue.forward(features);
+            }
+            catch (const std::runtime_error& e) {
+                logLine("numerical_issue game=" + std::to_string(nnue.trainGames)
+                    + " step=" + std::to_string(step) + " stage=forward " + e.what());
+                continue;
+            }
 
             float mse{ calculateMSE(output, targets) };
-            avgMSE += mse;
+            if (!std::isfinite(mse)) {
+                int badOutput{ -1 }, badTarget{ -1 };
+                float maxOutput{ 0.f }, maxTarget{ 0.f };
+                for (int row{ 0 }; row < batchSize; row++) {
+                    if (!std::isfinite(output(row, 0)) && badOutput < 0) badOutput = row;
+                    else maxOutput = std::max(maxOutput, std::abs(output(row, 0)));
+                    if (!std::isfinite(targets(row, 0)) && badTarget < 0) badTarget = row;
+                    else maxTarget = std::max(maxTarget, std::abs(targets(row, 0)));
+                }
+                logLine("numerical_issue game=" + std::to_string(nnue.trainGames)
+                    + " step=" + std::to_string(step) + " stage=loss mse=" + std::to_string(mse)
+                    + " first_bad_output_row=" + std::to_string(badOutput)
+                    + " first_bad_target_row=" + std::to_string(badTarget)
+                    + " max_abs_output=" + std::to_string(maxOutput)
+                    + " max_abs_target=" + std::to_string(maxTarget));
+                continue;
+            }
 
             Matrix error{ mseDiff(output, targets) };
-            nnue.backward(error, lr);
+            std::string failure;
+            if (!nnue.backward(error, lr, &failure)) {
+                logLine("numerical_issue game=" + std::to_string(nnue.trainGames)
+                    + " step=" + std::to_string(step) + " stage=optimizer " + failure);
+                continue;
+            }
+            avgMSE += mse;
+            completedSteps++;
         }
 
-        avgMSE /= trainStepsPerGame;
-        std::cout << "Training " << nnue.trainGames << " complete. Avg MSE: " << avgMSE << "\n";
+        logLine("training game=" + std::to_string(nnue.trainGames)
+            + " result=" + (board.isDraw() ? "draw" : (board.isDarkTurn() ? "light_win" : "dark_win"))
+            + " avg_mse=" + (completedSteps ? std::to_string(avgMSE / completedSteps) : "n/a")
+            + " completed_steps=" + std::to_string(completedSteps)
+            + " skipped_steps=" + std::to_string(trainStepsPerGame - completedSteps)
+            + " buffer=" + std::to_string(buffer.size()));
 
         // periodic stuff
         if (nnue.trainGames % saveLatestEvery == 0) {
-            nnue.save("checkpoints/nnue_latest.bin");
+            nnue.save((checkpointDir / "nnue_latest.bin").string());
+            logLine("latest_checkpoint game=" + std::to_string(nnue.trainGames));
         }
 
         if (nnue.trainGames != 0 && nnue.trainGames % checkpointEvery == 0) {
-            nnue.save("checkpoints/nnue_" + std::to_string(nnue.trainGames) + ".bin");
+            nnue.save((checkpointDir / ("nnue_" + std::to_string(nnue.trainGames) + ".bin")).string());
+            logLine("numbered_checkpoint game=" + std::to_string(nnue.trainGames));
             std::cout << "Checkpoint saved at step " << nnue.trainGames << "\n";
 
             if (nnue.trainGames != checkpointEvery) { // skip first
                 std::cout << "Starting ELO evaluation\n";
-                eloCheck(egtb, "checkpoints/nnue_" + std::to_string(nnue.trainGames) + ".bin", "checkpoints/nnue_" + std::to_string(nnue.trainGames - checkpointEvery) + ".bin");
+                eloCheck(egtb, (checkpointDir / ("nnue_" + std::to_string(nnue.trainGames) + ".bin")).string(),
+                    (checkpointDir / ("nnue_" + std::to_string(nnue.trainGames - checkpointEvery) + ".bin")).string());
             }
         }
         std::cout << "\n";

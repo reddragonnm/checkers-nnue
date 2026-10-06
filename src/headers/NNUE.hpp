@@ -1,5 +1,13 @@
 #pragma once
 
+#include <algorithm>
+#include <cmath>
+#include <iomanip>
+#include <limits>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <utility>
 #include <vector>
 #include <filesystem>
 
@@ -58,16 +66,39 @@ private:
     float m_powb1{ 1.f };
     float m_powb2{ 1.f };
 
-    void adamUpdate(Matrix& W, const Matrix& dW, Matrix& m, Matrix& v, float lr, float b1, float b2, float bc1, float bc2, float eps) {
+    void adamUpdate(Matrix& W, const Matrix& dW, Matrix& m, Matrix& v, float lr, float b1, float b2, float bc1, float bc2, float eps, const char* tensor) {
+        if (bc1 <= 0.f || bc2 <= 0.f) throw std::runtime_error("Invalid Adam bias correction");
+        auto fail = [&](int i, const char* problem) {
+            std::ostringstream details;
+            details << std::setprecision(std::numeric_limits<float>::max_digits10)
+                    << m_numInputs << 'x' << m_numOutputs << ' ' << tensor << '[' << i << "] " << problem
+                    << " g=" << dW.data()[i] << " w=" << W.data()[i]
+                    << " m=" << m.data()[i] << " v=" << v.data()[i]
+                    << " bc1=" << bc1 << " bc2=" << bc2;
+            throw std::runtime_error(details.str());
+        };
         for (int i{ 0 }; i < W.numRows() * W.numCols(); i++) {
             float g{ dW.data()[i] };
+            if (!std::isfinite(g) || !std::isfinite(W.data()[i]))
+                fail(i, "non-finite gradient or weight");
+            g = std::clamp(g, -1.f, 1.f);
             m.data()[i] = (b1 * m.data()[i]) + ((1.f - b1) * g);
             v.data()[i] = (b2 * v.data()[i]) + ((1.f - b2) * g * g);
+
+            if (!std::isfinite(m.data()[i]) || !std::isfinite(v.data()[i]) || v.data()[i] < 0.f)
+                fail(i, "invalid Adam moment");
+            if (std::abs(m.data()[i]) < 1e-30f && v.data()[i] < 1e-30f) {
+                m.data()[i] = 0.f;
+                v.data()[i] = 0.f;
+                continue;
+            }
 
             float mHat{ m.data()[i] / bc1 };
             float vHat{ v.data()[i] / bc2 };
 
             W.data()[i] -= lr * mHat / (std::sqrt(vHat) + eps);
+            if (!std::isfinite(W.data()[i]))
+                fail(i, "non-finite weight update");
         }
     }
 
@@ -88,6 +119,10 @@ public:
     Matrix forward(const Matrix& input) {
         m_lastInput = input;
         m_lastPreActivation = (input * m_weights) + m_bias;
+        for (int i{ 0 }, n{ m_lastPreActivation.numRows() * m_lastPreActivation.numCols() }; i < n; i++)
+            if (!std::isfinite(m_lastPreActivation.data()[i]))
+                throw std::runtime_error("non-finite preactivation " + std::to_string(m_numInputs)
+                    + "x" + std::to_string(m_numOutputs) + " index=" + std::to_string(i));
         Matrix output{ m_lastPreActivation };
 
         output.map(Activation::apply);
@@ -112,8 +147,8 @@ public:
         float bc1{ 1.0f - m_powb1 };
         float bc2{ 1.0f - m_powb2 };
 
-        adamUpdate(m_weights, dW, m_momentumW, m_varianceW, lr, b1, b2, bc1, bc2, eps);
-        adamUpdate(m_bias, dB, m_momentumB, m_varianceB, lr, b1, b2, bc1, bc2, eps);
+        adamUpdate(m_weights, dW, m_momentumW, m_varianceW, lr, b1, b2, bc1, bc2, eps, "weights");
+        adamUpdate(m_bias, dB, m_momentumB, m_varianceB, lr, b1, b2, bc1, bc2, eps, "bias");
 
         return inputError;
     }
@@ -124,6 +159,18 @@ public:
 
     const Matrix& getBias() const {
         return m_bias;
+    }
+
+    bool isFinite() const {
+        auto finiteMatrix = [](const Matrix& matrix) {
+            for (int i{ 0 }, n{ matrix.numRows() * matrix.numCols() }; i < n; i++)
+                if (!std::isfinite(matrix.data()[i])) return false;
+            return true;
+        };
+        return finiteMatrix(m_weights) && finiteMatrix(m_bias)
+            && finiteMatrix(m_momentumW) && finiteMatrix(m_varianceW)
+            && finiteMatrix(m_momentumB) && finiteMatrix(m_varianceB)
+            && std::isfinite(m_powb1) && std::isfinite(m_powb2);
     }
 
     void save(std::ofstream& out) const {
@@ -179,12 +226,24 @@ public:
         return m_outputLayer.forward(x);
     }
 
-    void backward(const Matrix& error, float lr) {
-        Matrix grad{ m_outputLayer.backward(error, lr) };
-        for (int i{ static_cast<int>(m_hiddenLayers.size()) - 1 }; i >= 0; i--) {
-            grad = m_hiddenLayers[i].backward(grad, lr);
+    bool backward(const Matrix& error, float lr, std::string* failure = nullptr) {
+        NNUE previous{ *this };
+        std::string reason;
+        try {
+            Matrix grad{ m_outputLayer.backward(error, lr) };
+            for (int i{ static_cast<int>(m_hiddenLayers.size()) - 1 }; i >= 0; i--) {
+                grad = m_hiddenLayers[i].backward(grad, lr);
+            }
+            m_accumulator.backward(grad, lr);
+            if (isFinite()) return true;
+            reason = "non-finite model after update";
         }
-        m_accumulator.backward(grad, lr);
+        catch (const std::runtime_error& e) {
+            reason = e.what();
+        }
+        *this = std::move(previous);
+        if (failure) *failure = std::move(reason);
+        return false;
     }
 
     const Layer<ClampedRelu>& getAccumulator() const {
@@ -197,6 +256,13 @@ public:
 
     const Layer<Linear>& getOutputLayer() const {
         return m_outputLayer;
+    }
+
+    bool isFinite() const {
+        if (!m_accumulator.isFinite() || !m_outputLayer.isFinite()) return false;
+        for (const auto& layer : m_hiddenLayers)
+            if (!layer.isFinite()) return false;
+        return true;
     }
 
     void save(const std::string& filename) const {

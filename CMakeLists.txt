@@ -54,8 +54,12 @@ else()
 
     add_executable(trainNNUE src/trainNNUE.cpp)
     target_compile_features(trainNNUE PRIVATE cxx_std_23)
-    target_compile_options(trainNNUE PRIVATE -O3 -march=native -ffast-math)
+    target_compile_options(trainNNUE PRIVATE -O3 -march=native)
     target_compile_definitions(trainNNUE PRIVATE)
+
+    add_executable(headlessMatch src/headlessMatch.cpp)
+    target_compile_features(headlessMatch PRIVATE cxx_std_23)
+    target_compile_options(headlessMatch PRIVATE -O3 -march=native -ffast-math)
 
     set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT main)
 endif()

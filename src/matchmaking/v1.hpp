@@ -30,11 +30,11 @@ namespace v1 {
         int completedDepth;
     };
 
-    #ifdef __EMSCRIPTEN__
+#ifdef __EMSCRIPTEN__
     constexpr int ttSize{ 1 << 20 };
-    #else
+#else
     constexpr int ttSize{ 1 << 24 };
-    #endif
+#endif
 
     class AIPlayer {
     private:
@@ -375,15 +375,15 @@ namespace v1 {
             return { score, completedPV, completedDepth };
         }
 
-        int getNodesHit() {
+        int getNodesHit() const {
             return m_nodesHit;
         }
 
-        int getHashCollisions() {
+        int getHashCollisions() const {
             return m_hashCollisions;
         }
 
-        int getEgtbHits() {
+        int getEgtbHits() const {
             return m_egtbHits;
         }
 
@@ -391,15 +391,15 @@ namespace v1 {
             std::fill(tt.begin(), tt.end(), TTEntry{ 0, -1, 0, -1, 0 });
         }
 
-        int getTTProbes() {
+        int getTTProbes() const {
             return m_ttProbes;
         }
 
-        int getTTUsefulHits() {
+        int getTTUsefulHits() const {
             return m_ttUsefulHits;
         }
 
-        int getTTCutoffs() {
+        int getTTCutoffs() const {
             return m_ttCutoffs;
         }
     };
