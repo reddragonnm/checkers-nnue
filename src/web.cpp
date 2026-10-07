@@ -65,7 +65,7 @@ extern "C" {
 int init_engine() {
     try {
         g_nnue = std::make_unique<NNUE>(std::vector<int>{128, 256, 32, 1});
-        g_nnue->load("/nnue_best.bin");
+        g_nnue->load("/nnue_best_v2.bin");
         g_nnueInference = std::make_unique<NNUEInference>(*g_nnue);
         g_board = std::make_unique<Checkers>(g_nnueInference.get());
         g_egtb = std::make_unique<EGTB>();

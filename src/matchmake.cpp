@@ -80,7 +80,7 @@ int main() {
     NNUE nnueV1{ { 128, 256, 32, 1 } }; nnueV1.load("nnue_21000.bin");
     NNUEInference nnueInferenceV1{ nnueV1 };
 
-    NNUE nnueV2{ { 128, 256, 32, 1 } }; nnueV2.load("nnue_16000.bin");
+    NNUE nnueV2{ { 128, 256, 32, 1 } }; nnueV2.load("nnue_best_v2.bin");
     NNUEInference nnueInferenceV2{ nnueV2 };
 
     Checkers board1{ &nnueInferenceV1 };
