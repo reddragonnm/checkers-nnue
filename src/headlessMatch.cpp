@@ -3,13 +3,14 @@
 #include <cstring>
 #include <iostream>
 #include <random>
+#include <string_view>
 #include <vector>
 
 #include "headers/AIPlayer.hpp"
 
 int main(int argc, char** argv) {
     if (argc != 3 && argc != 4) {
-        std::cerr << "Usage: headlessMatch <model-A.bin> <model-B.bin> [games]\n";
+        std::cerr << "Usage: headlessMatch <model-A.bin> <model-B.bin|piececount> [games]\n";
         return 1;
     }
 
@@ -28,16 +29,17 @@ int main(int argc, char** argv) {
     EGTB egtb;
     egtb.buildOrLoad("egtb.bin", "egtb_dtz.bin");
 
+    const bool pieceCountB{ std::string_view(argv[2]) == "piececount" };
     NNUE nnueA{ { 128, 256, 32, 1 } };
     NNUE nnueB{ { 128, 256, 32, 1 } };
     nnueA.load(argv[1]);
-    nnueB.load(argv[2]);
+    if (!pieceCountB) nnueB.load(argv[2]);
     NNUEInference inferenceA{ nnueA };
     NNUEInference inferenceB{ nnueB };
     Checkers boardA{ &inferenceA };
-    Checkers boardB{ &inferenceB };
+    Checkers boardB{ pieceCountB ? nullptr : &inferenceB };
     AIPlayer playerA{ boardA, egtb, inferenceA };
-    AIPlayer playerB{ boardB, egtb, inferenceB };
+    AIPlayer playerB{ boardB, egtb, inferenceB, pieceCountB };
 
     std::mt19937_64 openingRng{ 42 };
     std::vector<int> opening;

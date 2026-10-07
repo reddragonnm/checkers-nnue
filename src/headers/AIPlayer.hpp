@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <bit>
 #include <chrono>
 #include <iostream>
 #include <limits>
@@ -40,6 +41,7 @@ private:
     Checkers& m_board;
     EGTB& m_egtb;
     NNUEInference& m_nnue;
+    bool m_pieceCount;
 
     std::vector<TTEntry> tt;
 
@@ -66,6 +68,13 @@ private:
     }
 
     int evaluate(Checkers& board) {
+        if (m_pieceCount) {
+            int dark{ std::popcount(board.getDarkPieces()) +
+                      std::popcount(board.getDarkPieces() & board.getKingPieces()) };
+            int light{ std::popcount(board.getLightPieces()) +
+                       std::popcount(board.getLightPieces() & board.getKingPieces()) };
+            return board.isDarkTurn() ? dark - light : light - dark;
+        }
         float output{ m_nnue.forwardAccumulator(!board.isDarkTurn()) };
         return std::clamp(static_cast<int>(output * infinity), -infinity + infinityThreshold, infinity - infinityThreshold);
     }
@@ -318,7 +327,7 @@ private:
     }
 
 public:
-    AIPlayer(Checkers& board, EGTB& egtb, NNUEInference& nnue) : m_board(board), m_egtb(egtb), m_nnue(nnue), m_nodesHit(0), tt(ttSize, { 0, -1, 0, -1, 0 }) {}
+    AIPlayer(Checkers& board, EGTB& egtb, NNUEInference& nnue, bool pieceCount = false) : m_board(board), m_egtb(egtb), m_nnue(nnue), m_pieceCount(pieceCount), m_nodesHit(0), tt(ttSize, { 0, -1, 0, -1, 0 }) {}
 
     SearchResult search(int input = 10, bool depthInput = true, bool printInfo = false) {
         m_nodesHit = 0;
