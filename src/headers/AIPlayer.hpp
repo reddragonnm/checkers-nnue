@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cassert>
+#include <algorithm>
+#include <array>
 #include <bit>
 #include <chrono>
 #include <iostream>
@@ -15,6 +17,16 @@ constexpr int infinityThreshold{ 50 };
 constexpr int searchAborted{ std::numeric_limits<int>::min() / 2 };
 
 enum { TTExact, TTUpper, TTLower };
+
+enum class MoveOrdering { TT, Tactical, Killers, History };
+enum class LMRPolicy { Conservative, Late, EndgameGuard };
+
+struct LMREndgameStats {
+    int reductions{ 0 }, researches{ 0 };
+    int reducedCutoffs{ 0 }, researchCutoffs{ 0 };
+    // Inclusive call work overlaps when reduced searches nest.
+    int reducedNodes{ 0 }, researchNodes{ 0 };
+};
 
 struct TTEntry {
     std::uint64_t key;
@@ -37,11 +49,19 @@ constexpr int ttSize{ 1 << 24 };
 #endif
 
 class AIPlayer {
+    friend struct AIPlayerTest;
 private:
     Checkers& m_board;
     EGTB& m_egtb;
     NNUEInference& m_nnue;
     bool m_pieceCount;
+    MoveOrdering m_ordering;
+    bool m_useLMR;
+    LMRPolicy m_lmrPolicy;
+    static constexpr int maxKillerPly{ 256 };
+    static constexpr int historyLimit{ 16384 };
+    std::array<std::array<std::uint16_t, 2>, maxKillerPly> m_killers{};
+    std::array<std::array<std::array<int, 64>, 64>, 2> m_history{};
 
     std::vector<TTEntry> tt;
 
@@ -49,9 +69,81 @@ private:
     int m_hashCollisions{ 0 };
     int m_egtbHits{ 0 };
 
-    int m_ttProbes{ 0 };      // found matching hash
+    int m_ttProbes{ 0 };      // table lookups
+    int m_ttMatches{ 0 };     // matching hash, including shallow entries
     int m_ttUsefulHits{ 0 };  // depth sufficient
     int m_ttCutoffs{ 0 };     // returned early from TT
+    int m_betaCutoffs{ 0 };
+    int m_firstMoveCutoffs{ 0 };
+    int m_lmrReductions{ 0 };
+    int m_lmrResearches{ 0 };
+    LMREndgameStats m_lmrEndgame{};
+
+    struct RankedMove {
+        int index;
+        int score;
+    };
+
+    bool isPromotion(const Checkers& board, std::uint16_t move) const {
+        return !(board.getKingPieces() & (1ULL << board.getFromSquare(move)))
+            && (board.isDarkTurn() ? board.getToSquare(move) >= 56 : board.getToSquare(move) < 8);
+    }
+
+    bool shouldReduce(const Checkers& board, RankedMove move, int rank, int depth, int ply) const {
+        return m_useLMR && ply > 0 && depth >= 4 && rank >= (m_lmrPolicy == LMRPolicy::Late ? 6 : 4)
+            && (m_lmrPolicy != LMRPolicy::EndgameGuard || std::popcount(board.getDarkPieces() | board.getLightPieces()) > 5)
+            && move.score < 1024
+            && !board.isMidCapture() && !board.isCaptureMove(board.getMoves()[move.index])
+            && !isPromotion(board, board.getMoves()[move.index]);
+    }
+
+    std::array<RankedMove, maxMovesSize> orderMoves(const Checkers& board, int hashMove, int ply) const {
+        std::array<RankedMove, maxMovesSize> moves{};
+        for (int i = 0; i < board.getNumMoves(); ++i) {
+            const auto move = board.getMoves()[i];
+            const int from = board.getFromSquare(move);
+            const int to = board.getToSquare(move);
+            int score = i == hashMove ? 1000000 : 0;
+            if (m_ordering >= MoveOrdering::Tactical) {
+                if (isPromotion(board, move))
+                    score += 20000;
+                if (board.isCaptureMove(move)) {
+                    // shortcut: score single jumps; rank whole chains if tactical benchmarks justify it.
+                    score += 1000;
+                    if (board.getKingPieces() & (1ULL << ((from + to) / 2)))
+                        score += 10000;
+                }
+                else {
+                    if (m_ordering >= MoveOrdering::Killers && ply < maxKillerPly) {
+                        if (move == m_killers[ply][0]) score += 30000;
+                        else if (move == m_killers[ply][1]) score += 29000;
+                    }
+                    if (m_ordering >= MoveOrdering::History)
+                        score += m_history[board.isDarkTurn()][from][to];
+                }
+            }
+            moves[i] = { i, score };
+        }
+        // Keep generator indices intact for TT entries, PVs, and makeMove().
+        std::sort(moves.begin(), moves.begin() + board.getNumMoves(), [](const auto& a, const auto& b) {
+            return a.score != b.score ? a.score > b.score : a.index < b.index;
+        });
+        return moves;
+    }
+
+    void recordQuietCutoff(const Checkers& board, std::uint16_t move, int depth, int ply) {
+        if (board.isCaptureMove(move)) return;
+        if (m_ordering >= MoveOrdering::Killers && ply < maxKillerPly && m_killers[ply][0] != move) {
+            m_killers[ply][1] = m_killers[ply][0];
+            m_killers[ply][0] = move;
+        }
+        if (m_ordering >= MoveOrdering::History) {
+            int& history = m_history[board.isDarkTurn()][board.getFromSquare(move)][board.getToSquare(move)];
+            const int bonus = std::min(depth, 128) * std::min(depth, 128);
+            // Bounded gravity prevents overflow and keeps learning after many cutoffs.
+            history += bonus - history * bonus / historyLimit;
+        }
+    }
 
     bool m_stopSearch{ false };
     bool m_hasDeadline{ false };
@@ -126,8 +218,10 @@ private:
             return evaluate(board);
 
         int eval{ -infinity };
+        const auto moves = orderMoves(board, -1, ply);
 
-        for (int i{ 0 }; i < numMoves; i++) {
+        for (int rank{ 0 }; rank < numMoves; rank++) {
+            const int i = moves[rank].index;
             int score;
             if (board.makeMove(i)) {
                 m_nodesHit++;
@@ -168,12 +262,13 @@ private:
 
         std::uint64_t hash{ board.searchHash() };
         TTEntry& entry{ tt[hash & (ttSize - 1)] };
+        m_ttProbes++;
 
         if (entry.key != 0 && entry.key != hash)
             m_hashCollisions++;
 
         if (entry.key == hash) {
-            m_ttProbes++;
+            m_ttMatches++;
         }
 
         if (entry.key == hash && entry.depth >= depth) {
@@ -207,45 +302,75 @@ private:
         int bestVal{ -infinity };
         int bestMove{ -1 };
 
-        for (int pass{ 0 }; pass < 2; pass++) { // try best move from last depth first
-            for (int i{ 0 }; i < numMoves; i++) {
-                if (pass == 0 && i != hashMove)
-                    continue;
-                if (pass == 1 && i == hashMove)
-                    continue;
+        const auto moves = orderMoves(board, hashMove, ply);
+        for (int rank{ 0 }; rank < numMoves; rank++) {
+            const int i = moves[rank].index;
+            const auto move = board.getMoves()[i];
+            const bool reduce = shouldReduce(board, moves[rank], rank, depth, ply);
+            const bool endgameReduction = reduce && std::popcount(board.getDarkPieces() | board.getLightPieces()) <= 5;
+            bool researched = false;
 
-                std::vector<int> childPV;
-                int score;
-                bool turnSwitched{ board.makeMove(i) };
+            std::vector<int> childPV;
+            int score;
+            bool turnSwitched{ board.makeMove(i) };
 
-                if (turnSwitched) {
-                    m_nodesHit++;
+            if (turnSwitched) {
+                m_nodesHit++;
+                if (reduce) {
+                    m_lmrReductions++;
+                    const int reducedStart = m_nodesHit - 1;
+                    score = negamax(-alpha - 1, -alpha, depth - 2, board, childPV, ply + 1);
+                    if (score != searchAborted) score = -score;
+                    if (endgameReduction) {
+                        ++m_lmrEndgame.reductions;
+                        m_lmrEndgame.reducedNodes += m_nodesHit - reducedStart;
+                    }
+                    if (score != searchAborted && score > alpha) {
+                        researched = true;
+                        m_lmrResearches++;
+                        const int researchStart = m_nodesHit;
+                        m_nodesHit++;
+                        score = negamax(-beta, -alpha, depth - 1, board, childPV, ply + 1);
+                        if (score != searchAborted) score = -score;
+                        if (endgameReduction) {
+                            ++m_lmrEndgame.researches;
+                            m_lmrEndgame.researchNodes += m_nodesHit - researchStart;
+                        }
+                    }
+                }
+                else {
                     score = negamax(-beta, -alpha, depth - 1, board, childPV, ply + 1);
                     if (score != searchAborted) score = -score;
                 }
-                else {
-                    score = negamax(alpha, beta, depth, board, childPV, ply);
-                }
-
-                board.undoMove();
-
-                if (score == searchAborted)
-                    return searchAborted;
-
-                if (score > bestVal) {
-                    bestVal = score;
-                    bestMove = i;
-                    pv = { i };
-                    if (!turnSwitched)
-                        pv.insert(pv.end(), childPV.begin(), childPV.end());
-                }
-
-                alpha = std::max(alpha, score);
-                if (alpha >= beta)
-                    break;
             }
-            if (alpha >= beta)
+            else {
+                score = negamax(alpha, beta, depth, board, childPV, ply);
+            }
+
+            board.undoMove();
+
+            if (score == searchAborted)
+                return searchAborted;
+
+            if (score > bestVal) {
+                bestVal = score;
+                bestMove = i;
+                pv = { i };
+                if (!turnSwitched)
+                    pv.insert(pv.end(), childPV.begin(), childPV.end());
+            }
+
+            alpha = std::max(alpha, score);
+            if (alpha >= beta) {
+                if (endgameReduction) {
+                    if (researched) ++m_lmrEndgame.researchCutoffs;
+                    else ++m_lmrEndgame.reducedCutoffs;
+                }
+                m_betaCutoffs++;
+                if (rank == 0) m_firstMoveCutoffs++;
+                recordQuietCutoff(board, move, depth, ply);
                 break;
+            }
         }
 
         int val{ bestVal };
@@ -327,15 +452,27 @@ private:
     }
 
 public:
-    AIPlayer(Checkers& board, EGTB& egtb, NNUEInference& nnue, bool pieceCount = false) : m_board(board), m_egtb(egtb), m_nnue(nnue), m_pieceCount(pieceCount), m_nodesHit(0), tt(ttSize, { 0, -1, 0, -1, 0 }) {}
+    AIPlayer(Checkers& board, EGTB& egtb, NNUEInference& nnue, bool pieceCount = false,
+        MoveOrdering ordering = MoveOrdering::History, bool useLMR = false,
+        LMRPolicy lmrPolicy = LMRPolicy::Conservative) : m_board(board), m_egtb(egtb), m_nnue(nnue),
+        m_pieceCount(pieceCount), m_ordering(ordering), m_useLMR(useLMR), m_lmrPolicy(lmrPolicy), tt(ttSize, { 0, -1, 0, -1, 0 }) {}
 
     SearchResult search(int input = 10, bool depthInput = true, bool printInfo = false) {
         m_nodesHit = 0;
         m_egtbHits = 0;
         m_hashCollisions = 0;
         m_ttProbes = 0;
+        m_ttMatches = 0;
         m_ttUsefulHits = 0;
         m_ttCutoffs = 0;
+        m_betaCutoffs = 0;
+        m_firstMoveCutoffs = 0;
+        m_lmrReductions = 0;
+        m_lmrResearches = 0;
+        m_lmrEndgame = {};
+        for (auto& side : m_history)
+            for (auto& from : side)
+                for (auto& value : from) value /= 2;
 
         int score{ 0 };
         int d{ 1 };
@@ -397,6 +534,8 @@ public:
 
     void resetTT() {
         std::fill(tt.begin(), tt.end(), TTEntry{ 0, -1, 0, -1, 0 });
+        m_killers = {};
+        m_history = {};
     }
 
     int getTTProbes() const {
@@ -406,6 +545,13 @@ public:
     int getTTUsefulHits() const {
         return m_ttUsefulHits;
     }
+
+    int getTTMatches() const { return m_ttMatches; }
+    int getBetaCutoffs() const { return m_betaCutoffs; }
+    int getFirstMoveCutoffs() const { return m_firstMoveCutoffs; }
+    int getLMRReductions() const { return m_lmrReductions; }
+    int getLMRResearches() const { return m_lmrResearches; }
+    const LMREndgameStats& getLMREndgameStats() const { return m_lmrEndgame; }
 
     int getTTCutoffs() const {
         return m_ttCutoffs;

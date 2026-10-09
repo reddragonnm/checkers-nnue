@@ -1,0 +1,4 @@
+"Pairing","Wins","Losses","Draws","Score_pct","CI_low_pct","CI_high_pct"
+"original-baseline","89","79","32","52.5","50","55.00000000000001"
+"guard-baseline","89","86","25","50.75","48.5","53"
+"guard-original","88","85","27","50.75","48.25","53.25"

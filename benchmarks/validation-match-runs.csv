@@ -1,0 +1,4 @@
+"Pairing","Games","Logical_CPU","Budget_ms","Wall_ms","ExitCode"
+"original-baseline","200","2","100","1326221.1315","0"
+"guard-baseline","200","2","100","1295373.8104","0"
+"guard-original","200","2","100","1325301.8548","0"

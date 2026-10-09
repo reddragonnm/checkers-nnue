@@ -1,0 +1,103 @@
+# Seed 42; depth-4 TT self-play; random first 8 turns and 20% exploration thereafter.
+# 20 unique boards each: opening, middle, captures, kings, endgame.
+# Each line: phase followed by hexadecimal encoded moves from the initial board.
+captures 4da b25 6a1 1a1a 1463 1a9c
+captures 4da b25 6a1 1a1a 1463 1a9c 1563 95c 395
+middle 4da b25 6a1 1a1a 1463 1a9c 1563 95c 395 170e 11d5 c68
+middle 4da b25 6a1 1a1a 1463 1a9c 1563 95c 395 170e 11d5 c68 211 e31 55c
+middle 4da b25 6a1 1a1a 1463 1a9c 1563 95c 395 170e 11d5 c68 211 e31 55c cea 5de a21
+middle 4da b25 6a1 1a1a 1463 1a9c 1563 95c 395 170e 11d5 c68 211 e31 55c cea 5de a21 458 85a 48
+captures 4da b25 6a1 1a1a 1463 1a9c 1563 95c 395 170e 11d5 c68 211 e31 55c cea 5de a21 458 85a 48 eb3 293 ba7
+middle 4da b25 6a1 1a1a 1463 1a9c 1563 95c 395 170e 11d5 c68 211 e31 55c cea 5de a21 458 85a 48 eb3 293 ba7 14e1 19d5 131e
+middle 4da b25 6a1 1a1a 1463 1a9c 1563 95c 395 170e 11d5 c68 211 e31 55c cea 5de a21 458 85a 48 eb3 293 ba7 14e1 19d5 131e cec 1873 1f2a
+middle 4da b25 6a1 1a1a 1463 1a9c 1563 95c 395 170e 11d5 c68 211 e31 55c cea 5de a21 458 85a 48 eb3 293 ba7 14e1 19d5 131e cec 1873 1f2a cc 1b1a 14e
+middle 4da b25 6a1 1a1a 1463 1a9c 1563 95c 395 170e 11d5 c68 211 e31 55c cea 5de a21 458 85a 48 eb3 293 ba7 14e1 19d5 131e cec 1873 1f2a cc 1b1a 14e d6e 397 ba7
+middle 4da b25 6a1 1a1a 1463 1a9c 1563 95c 395 170e 11d5 c68 211 e31 55c cea 5de a21 458 85a 48 eb3 293 ba7 14e1 19d5 131e cec 1873 1f2a cc 1b1a 14e d6e 397 ba7 7a5 fb5 315
+middle 4da b25 6a1 1a1a 1463 1a9c 1563 95c 395 170e 11d5 c68 211 e31 55c cea 5de a21 458 85a 48 eb3 293 ba7 14e1 19d5 131e cec 1873 1f2a cc 1b1a 14e d6e 397 ba7 7a5 fb5 315 c68 96c 1d63
+middle 4da b25 6a1 1a1a 1463 1a9c 1563 95c 395 170e 11d5 c68 211 e31 55c cea 5de a21 458 85a 48 eb3 293 ba7 14e1 19d5 131e cec 1873 1f2a cc 1b1a 14e d6e 397 ba7 7a5 fb5 315 c68 96c 1d63 5de 693 7a5
+middle 4da b25 6a1 1a1a 1463 1a9c 1563 95c 395 170e 11d5 c68 211 e31 55c cea 5de a21 458 85a 48 eb3 293 ba7 14e1 19d5 131e cec 1873 1f2a cc 1b1a 14e d6e 397 ba7 7a5 fb5 315 c68 96c 1d63 5de 693 7a5 4ca 96e 1de5 1953
+middle 4da b25 6a1 1a1a 1463 1a9c 1563 95c 395 170e 11d5 c68 211 e31 55c cea 5de a21 458 85a 48 eb3 293 ba7 14e1 19d5 131e cec 1873 1f2a cc 1b1a 14e d6e 397 ba7 7a5 fb5 315 c68 96c 1d63 5de 693 7a5 4ca 96e 1de5 1953 55c 18d5 211
+middle 4da b25 6a1 1a1a 1463 1a9c 1563 95c 395 170e 11d5 c68 211 e31 55c cea 5de a21 458 85a 48 eb3 293 ba7 14e1 19d5 131e cec 1873 1f2a cc 1b1a 14e d6e 397 ba7 7a5 fb5 315 c68 96c 1d63 5de 693 7a5 4ca 96e 1de5 1953 55c 18d5 211 aa3 45a 18d1
+opening 45a b25 6a1 1a98 211 a21
+opening 45a b25 6a1 1a98 211 a21 5de 1957 45a
+opening 45a b25 6a1 1a98 211 a21 5de 1957 45a c68 55e e31
+opening 45a b25 6a1 1a98 211 a21 5de 1957 45a c68 55e e31 7a7 cec 395
+opening 45a b25 6a1 1a98 211 a21 5de 1957 45a c68 55e e31 7a7 cec 395 c6a 48 ba5
+opening 45a b25 6a1 1a98 211 a21 5de 1957 45a c68 55e e31 7a7 cec 395 c6a 48 ba5 1ce f33 55c
+opening 45a b25 6a1 1a98 211 a21 5de 1957 45a c68 55e e31 7a7 cec 395 c6a 48 ba5 1ce f33 55c dee 395 95e
+captures 45a b25 6a1 1a98 211 a21 5de 1957 45a c68 55e e31 7a7 cec 395 c6a 48 ba5 1ce f33 55c dee 395 95e 211 eb1 14e
+kings 45a b25 6a1 1a98 211 a21 5de 1957 45a c68 55e e31 7a7 cec 395 c6a 48 ba5 1ce f33 55c dee 395 95e 211 eb1 14e 15c5 723 1a9c 170e
+kings 45a b25 6a1 1a98 211 a21 5de 1957 45a c68 55e e31 7a7 cec 395 c6a 48 ba5 1ce f33 55c dee 395 95e 211 eb1 14e 15c5 723 1a9c 170e 315 178c 10d5
+kings 45a b25 6a1 1a98 211 a21 5de 1957 45a c68 55e e31 7a7 cec 395 c6a 48 ba5 1ce f33 55c dee 395 95e 211 eb1 14e 15c5 723 1a9c 170e 315 178c 10d5 387 6a3 1b1a 1688
+captures 45a b25 6a1 1a98 211 a21 5de 1957 45a c68 55e e31 7a7 cec 395 c6a 48 ba5 1ce f33 55c dee 395 95e 211 eb1 14e 15c5 723 1a9c 170e 315 178c 10d5 387 6a3 1b1a 1688 291 160a 4da
+kings 45a b25 6a1 1a98 211 a21 5de 1957 45a c68 55e e31 7a7 cec 395 c6a 48 ba5 1ce f33 55c dee 395 95e 211 eb1 14e 15c5 723 1a9c 170e 315 178c 10d5 387 6a3 1b1a 1688 291 160a 4da 1853 55e cec
+captures 45a b25 55e aa1 17ac 1d63 18d1
+opening 45a b25 55e aa1 17ac 1d63 18d1 121a f35 5de
+opening 45a b25 55e aa1 17ac 1d63 18d1 121a f35 5de c6a 7a7 eb1
+opening 45a b25 55e aa1 17ac 1d63 18d1 121a f35 5de c6a 7a7 eb1 291 858 ca
+captures 45a b25 55e aa1 17ac 1d63 18d1 121a f35 5de c6a 7a7 eb1 291 858 ca ba5 395 aa3
+captures 45a b25 55e aa1 17ac 1d63 18d1 121a f35 5de c6a 7a7 eb1 291 858 ca ba5 395 aa3 16ac 1b3a d6c 55e
+kings 45a b25 55e aa1 17ac 1d63 18d1 121a f35 5de c6a 7a7 eb1 291 858 ca ba5 395 aa3 16ac 1b3a d6c 55e 1957 48 fb5
+kings 45a b25 55e aa1 17ac 1d63 18d1 121a f35 5de c6a 7a7 eb1 291 858 ca ba5 395 aa3 16ac 1b3a d6c 55e 1957 48 fb5 eb3 b25 cfc
+middle 45a b25 55e aa1 17ac 1d63 18d1 121a f35 5de c6a 7a7 eb1 291 858 ca ba5 395 aa3 16ac 1b3a d6c 55e 1957 48 fb5 eb3 b25 cfc 95e 1f2e 1de5
+middle 45a b25 55e aa1 17ac 1d63 18d1 121a f35 5de c6a 7a7 eb1 291 858 ca ba5 395 aa3 16ac 1b3a d6c 55e 1957 48 fb5 eb3 b25 cfc 95e 1f2e 1de5 4da 795 131e 17ac
+captures 45a b25 55e aa1 17ac 1d63 18d1 121a f35 5de c6a 7a7 eb1 291 858 ca ba5 395 aa3 16ac 1b3a d6c 55e 1957 48 fb5 eb3 b25 cfc 95e 1f2e 1de5 4da 795 131e 17ac c6a 6a1 1a1a
+middle 45a b25 55e aa1 17ac 1d63 18d1 121a f35 5de c6a 7a7 eb1 291 858 ca ba5 395 aa3 16ac 1b3a d6c 55e 1957 48 fb5 eb3 b25 cfc 95e 1f2e 1de5 4da 795 131e 17ac c6a 6a1 1a1a 1463 18f1 1e2a 14c
+captures 45a b25 55e aa1 17ac 1d63 18d1 121a f35 5de c6a 7a7 eb1 291 858 ca ba5 395 aa3 16ac 1b3a d6c 55e 1957 48 fb5 eb3 b25 cfc 95e 1f2e 1de5 4da 795 131e 17ac c6a 6a1 1a1a 1463 18f1 1e2a 14c 611 121a 5ce
+opening 5de a21 55c 85a 14e1 1a98
+opening 5de a21 55c 85a 14e1 1a98 723 1b1a 1463
+captures 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a
+middle 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7
+middle 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea
+middle 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315
+captures 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c
+captures 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de
+kings 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973
+captures 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce
+kings 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33
+kings 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de
+kings 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc
+kings 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a 9de fb5 ba5
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a 9de fb5 ba5 ab1 95c d7c
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a 9de fb5 ba5 ab1 95c d7c 715 f35 54e
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a 9de fb5 ba5 ab1 95c d7c 715 f35 54e c78 387 d7c
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a 9de fb5 ba5 ab1 95c d7c 715 f35 54e c78 387 d7c dee e31 797
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a 9de fb5 ba5 ab1 95c d7c 715 f35 54e c78 387 d7c dee e31 797 c78 ba7 e31
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a 9de fb5 ba5 ab1 95c d7c 715 f35 54e c78 387 d7c dee e31 797 c78 ba7 e31 9de c78 5ce
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a 9de fb5 ba5 ab1 95c d7c 715 f35 54e c78 387 d7c dee e31 797 c78 ba7 e31 9de c78 5ce e31 795 c78
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a 9de fb5 ba5 ab1 95c d7c 715 f35 54e c78 387 d7c dee e31 797 c78 ba7 e31 9de c78 5ce e31 795 c78 54c e31 397
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a 9de fb5 ba5 ab1 95c d7c 715 f35 54e c78 387 d7c dee e31 797 c78 ba7 e31 9de c78 5ce e31 795 c78 54c e31 397 c78 305 e31
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a 9de fb5 ba5 ab1 95c d7c 715 f35 54e c78 387 d7c dee e31 797 c78 ba7 e31 9de c78 5ce e31 795 c78 54c e31 397 c78 305 e31 14c c6a 1ce
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a 9de fb5 ba5 ab1 95c d7c 715 f35 54e c78 387 d7c dee e31 797 c78 ba7 e31 9de c78 5ce e31 795 c78 54c e31 397 c78 305 e31 14c c6a 1ce f35 313 aa3
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a 9de fb5 ba5 ab1 95c d7c 715 f35 54e c78 387 d7c dee e31 797 c78 ba7 e31 9de c78 5ce e31 795 c78 54c e31 397 c78 305 e31 14c c6a 1ce f35 313 aa3 395 d6c 4cc
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a 9de fb5 ba5 ab1 95c d7c 715 f35 54e c78 387 d7c dee e31 797 c78 ba7 e31 9de c78 5ce e31 795 c78 54c e31 397 c78 305 e31 14c c6a 1ce f35 313 aa3 395 d6c 4cc 8ea 313 aa3
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a 9de fb5 ba5 ab1 95c d7c 715 f35 54e c78 387 d7c dee e31 797 c78 ba7 e31 9de c78 5ce e31 795 c78 54c e31 397 c78 305 e31 14c c6a 1ce f35 313 aa3 395 d6c 4cc 8ea 313 aa3 5de 8da 14e1
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a 9de fb5 ba5 ab1 95c d7c 715 f35 54e c78 387 d7c dee e31 797 c78 ba7 e31 9de c78 5ce e31 795 c78 54c e31 397 c78 305 e31 14c c6a 1ce f35 313 aa3 395 d6c 4cc 8ea 313 aa3 5de 8da 14e1 b35 54e d7c
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a 9de fb5 ba5 ab1 95c d7c 715 f35 54e c78 387 d7c dee e31 797 c78 ba7 e31 9de c78 5ce e31 795 c78 54c e31 397 c78 305 e31 14c c6a 1ce f35 313 aa3 395 d6c 4cc 8ea 313 aa3 5de 8da 14e1 b35 54e d7c 7a5 f35 96c
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a 9de fb5 ba5 ab1 95c d7c 715 f35 54e c78 387 d7c dee e31 797 c78 ba7 e31 9de c78 5ce e31 795 c78 54c e31 397 c78 305 e31 14c c6a 1ce f35 313 aa3 395 d6c 4cc 8ea 313 aa3 5de 8da 14e1 b35 54e d7c 7a5 f35 96c 1d63 85a 18d1
+endgame 5de a21 55c 85a 14e1 1a98 723 1b1a 1463 cea 291 160a 10d1 1a9c 7a7 eb3 4a cea 458 ba5 315 d6e 1563 1a9c 19f5 1f2e 14c fb5 211 d6c 397 c6a 5de 1957 45a aa3 313 18d1 1443 14e5 1973 cc cfc 5ce 11d5 131e f33 7a7 cfc 9de f33 7a7 cfc e31 f35 c6a d7e aa1 162a 9de fb5 ba5 ab1 95c d7c 715 f35 54e c78 387 d7c dee e31 797 c78 ba7 e31 9de c78 5ce e31 795 c78 54c e31 397 c78 305 e31 14c c6a 1ce f35 313 aa3 395 d6c 4cc 8ea 313 aa3 5de 8da 14e1 b35 54e d7c 7a5 f35 96c 1d63 85a 18d1 387 458 1ce
+captures 45a aa1 55e c6a 7a5 1b1e
+captures 45a aa1 55e c6a 7a5 1b1e 15e5 1b9c 14e5
+captures 45a aa1 55e c6a 7a5 1b1e 15e5 1b9c 14e5 1853 129c d6e 397 aa3 172a
+captures 45a aa1 55e c6a 7a5 1b1e 15e5 1b9c 14e5 1853 129c d6e 397 aa3 172a 1b9c 1ce 1ce1 ca eb3 211 dee 313 ba5 458 cea 14c 85a 14e1 1873 1f2a 315 e31 1563
+captures 45a aa1 55e c6a 7a5 1b1e 15e5 1b9c 14e5 1853 129c d6e 397 aa3 172a 1b9c 1ce 1ce1 ca eb3 211 dee 313 ba5 458 cea 14c 85a 14e1 1873 1f2a 315 e31 1563 1a9c 293 170a
+kings 45a aa1 55e c6a 7a5 1b1e 15e5 1b9c 14e5 1853 129c d6e 397 aa3 172a 1b9c 1ce 1ce1 ca eb3 211 dee 313 ba5 458 cea 14c 85a 14e1 1873 1f2a 315 e31 1563 1a9c 293 170a 1053 c6a 4da fb7 395 dee 6a1 1a1a 55e 691 17ac 44a b35 ba7 d7e
+kings 45a aa1 55e c6a 7a5 1b1e 15e5 1b9c 14e5 1853 129c d6e 397 aa3 172a 1b9c 1ce 1ce1 ca eb3 211 dee 313 ba5 458 cea 14c 85a 14e1 1873 1f2a 315 e31 1563 1a9c 293 170a 1053 c6a 4da fb7 395 dee 6a1 1a1a 55e 691 17ac 44a b35 ba7 d7e 283 fb5 ca
+kings 45a aa1 55e c6a 7a5 1b1e 15e5 1b9c 14e5 1853 129c d6e 397 aa3 172a 1b9c 1ce 1ce1 ca eb3 211 dee 313 ba5 458 cea 14c 85a 14e1 1873 1f2a 315 e31 1563 1a9c 293 170a 1053 c6a 4da fb7 395 dee 6a1 1a1a 55e 691 17ac 44a b35 ba7 d7e 283 fb5 ca d6c 293 b35
+captures 45a aa1 55e c6a 7a5 1b1e 15e5 1b9c 14e5 1853 129c d6e 397 aa3 172a 1b9c 1ce 1ce1 ca eb3 211 dee 313 ba5 458 cea 14c 85a 14e1 1873 1f2a 315 e31 1563 1a9c 293 170a 1053 c6a 4da fb7 395 dee 6a1 1a1a 55e 691 17ac 44a b35 ba7 d7e 283 fb5 ca d6c 293 b35 4dc d6c 9de
+opening 4dc a21 5de c68 397 ba5 172e 1d67 1ce
+kings 4dc a21 5de c68 397 ba5 172e 1d67 1ce b23 45a 18d1 121a 1853 129c eb1 725 dee 1977 a21 7a5 85a 96e fb5 dfe cec 5de
+kings 4dc a21 5de c68 397 ba5 172e 1d67 1ce b23 45a 18d1 121a 1853 129c eb1 725 dee 1977 a21 7a5 85a 96e fb5 dfe cec 5de aa3 7a5 1b1e 1fac 797 ca
+kings 4dc a21 5de c68 397 ba5 172e 1d67 1ce b23 45a 18d1 121a 1853 129c eb1 725 dee 1977 a21 7a5 85a 96e fb5 dfe cec 5de aa3 7a5 1b1e 1fac 797 ca 8dc 1563 693 131a 9de bb5 1f2e 6a1 795 139c ba7 48
+kings 4dc a21 5de c68 397 ba5 172e 1d67 1ce b23 45a 18d1 121a 1853 129c eb1 725 dee 1977 a21 7a5 85a 96e fb5 dfe cec 5de aa3 7a5 1b1e 1fac 797 ca 8dc 1563 693 131a 9de bb5 1f2e 6a1 795 139c ba7 48 9de 14c c68
+kings 4dc a21 5de c68 397 ba5 172e 1d67 1ce b23 45a 18d1 121a 1853 129c eb1 725 dee 1977 a21 7a5 85a 96e fb5 dfe cec 5de aa3 7a5 1b1e 1fac 797 ca 8dc 1563 693 131a 9de bb5 1f2e 6a1 795 139c ba7 48 9de 14c c68 8ea 1a1a 293
+kings 4dc a21 5de c68 397 ba5 172e 1d67 1ce b23 45a 18d1 121a 1853 129c eb1 725 dee 1977 a21 7a5 85a 96e fb5 dfe cec 5de aa3 7a5 1b1e 1fac 797 ca 8dc 1563 693 131a 9de bb5 1f2e 6a1 795 139c ba7 48 9de 14c c68 8ea 1a1a 293 e31 1ab8 691 121a 5ce 723
+opening 4da a21 16a8 b25 55c 1953 129c aa1 395
+opening 4da a21 16a8 b25 55c 1953 129c aa1 395 d6c ca c6a
+opening 4da a21 16a8 b25 55c 1953 129c aa1 395 d6c ca c6a 458 85a 293
+opening 4da a21 16a8 b25 55c 1953 129c aa1 395 d6c ca c6a 458 85a 293 b23 14e1 e31
+opening 4da a21 16a8 b25 55c 1953 129c aa1 395 d6c ca c6a 458 85a 293 b23 14e1 e31 4a fb5 1ce
+opening 458 a21 4dc b23 313 8da
+opening 458 a21 4dc b23 313 8da 291 168c 1153

@@ -1,0 +1,111 @@
+Loading EGTB from egtb.bin...
+Loaded EGTB
+Loading DTZ from egtb_dtz.bin...
+Loaded DTZ
+Checkpoint loaded: nnue_best_v2.bin (Step: 22000)
+Checkpoint loaded: nnue_best_v2.bin (Step: 22000)
+A: nnue_best_v2.bin (LMR on)
+B: nnue_best_v2.bin (LMR off)
+Games: 100  Time per move: 100 ms
+Game 1: B  A 0  B 1  Draw 0
+Game 2: D  A 0  B 1  Draw 1
+Game 3: B  A 0  B 2  Draw 1
+Game 4: A  A 1  B 2  Draw 1
+Game 5: B  A 1  B 3  Draw 1
+Game 6: A  A 2  B 3  Draw 1
+Game 7: A  A 3  B 3  Draw 1
+Game 8: B  A 3  B 4  Draw 1
+Game 9: B  A 3  B 5  Draw 1
+Game 10: A  A 4  B 5  Draw 1
+Game 11: B  A 4  B 6  Draw 1
+Game 12: A  A 5  B 6  Draw 1
+Game 13: B  A 5  B 7  Draw 1
+Game 14: A  A 6  B 7  Draw 1
+Game 15: A  A 7  B 7  Draw 1
+Game 16: B  A 7  B 8  Draw 1
+Game 17: B  A 7  B 9  Draw 1
+Game 18: D  A 7  B 9  Draw 2
+Game 19: B  A 7  B 10  Draw 2
+Game 20: A  A 8  B 10  Draw 2
+Game 21: D  A 8  B 10  Draw 3
+Game 22: B  A 8  B 11  Draw 3
+Game 23: B  A 8  B 12  Draw 3
+Game 24: D  A 8  B 12  Draw 4
+Game 25: D  A 8  B 12  Draw 5
+Game 26: D  A 8  B 12  Draw 6
+Game 27: D  A 8  B 12  Draw 7
+Game 28: A  A 9  B 12  Draw 7
+Game 29: D  A 9  B 12  Draw 8
+Game 30: B  A 9  B 13  Draw 8
+Game 31: D  A 9  B 13  Draw 9
+Game 32: B  A 9  B 14  Draw 9
+Game 33: A  A 10  B 14  Draw 9
+Game 34: A  A 11  B 14  Draw 9
+Game 35: B  A 11  B 15  Draw 9
+Game 36: B  A 11  B 16  Draw 9
+Game 37: D  A 11  B 16  Draw 10
+Game 38: A  A 12  B 16  Draw 10
+Game 39: B  A 12  B 17  Draw 10
+Game 40: A  A 13  B 17  Draw 10
+Game 41: D  A 13  B 17  Draw 11
+Game 42: A  A 14  B 17  Draw 11
+Game 43: D  A 14  B 17  Draw 12
+Game 44: D  A 14  B 17  Draw 13
+Game 45: A  A 15  B 17  Draw 13
+Game 46: B  A 15  B 18  Draw 13
+Game 47: B  A 15  B 19  Draw 13
+Game 48: A  A 16  B 19  Draw 13
+Game 49: B  A 16  B 20  Draw 13
+Game 50: A  A 17  B 20  Draw 13
+Game 51: A  A 18  B 20  Draw 13
+Game 52: A  A 19  B 20  Draw 13
+Game 53: B  A 19  B 21  Draw 13
+Game 54: A  A 20  B 21  Draw 13
+Game 55: D  A 20  B 21  Draw 14
+Game 56: B  A 20  B 22  Draw 14
+Game 57: B  A 20  B 23  Draw 14
+Game 58: A  A 21  B 23  Draw 14
+Game 59: A  A 22  B 23  Draw 14
+Game 60: B  A 22  B 24  Draw 14
+Game 61: B  A 22  B 25  Draw 14
+Game 62: A  A 23  B 25  Draw 14
+Game 63: A  A 24  B 25  Draw 14
+Game 64: B  A 24  B 26  Draw 14
+Game 65: A  A 25  B 26  Draw 14
+Game 66: B  A 25  B 27  Draw 14
+Game 67: A  A 26  B 27  Draw 14
+Game 68: D  A 26  B 27  Draw 15
+Game 69: B  A 26  B 28  Draw 15
+Game 70: A  A 27  B 28  Draw 15
+Game 71: A  A 28  B 28  Draw 15
+Game 72: B  A 28  B 29  Draw 15
+Game 73: A  A 29  B 29  Draw 15
+Game 74: A  A 30  B 29  Draw 15
+Game 75: A  A 31  B 29  Draw 15
+Game 76: B  A 31  B 30  Draw 15
+Game 77: D  A 31  B 30  Draw 16
+Game 78: B  A 31  B 31  Draw 16
+Game 79: B  A 31  B 32  Draw 16
+Game 80: D  A 31  B 32  Draw 17
+Game 81: A  A 32  B 32  Draw 17
+Game 82: B  A 32  B 33  Draw 17
+Game 83: A  A 33  B 33  Draw 17
+Game 84: B  A 33  B 34  Draw 17
+Game 85: A  A 34  B 34  Draw 17
+Game 86: D  A 34  B 34  Draw 18
+Game 87: A  A 35  B 34  Draw 18
+Game 88: B  A 35  B 35  Draw 18
+Game 89: B  A 35  B 36  Draw 18
+Game 90: A  A 36  B 36  Draw 18
+Game 91: D  A 36  B 36  Draw 19
+Game 92: A  A 37  B 36  Draw 19
+Game 93: A  A 38  B 36  Draw 19
+Game 94: D  A 38  B 36  Draw 20
+Game 95: A  A 39  B 36  Draw 20
+Game 96: B  A 39  B 37  Draw 20
+Game 97: A  A 40  B 37  Draw 20
+Game 98: A  A 41  B 37  Draw 20
+Game 99: D  A 41  B 37  Draw 21
+Game 100: D  A 41  B 37  Draw 22
+Final: A 41, B 37, draws 22, A score 52%, observed Elo difference 13.9048
+Search totals: A nodes 765267748, B nodes 775328364, A mean depth 49.8532, B mean depth 48.9238, LMR reductions 15449312, re-searches 1236364

@@ -81,7 +81,15 @@ A large hash table stores results from previously evaluated positions. Each entr
 
 ### Quiescence Search
 
-At depth zero, rather than returning the static evaluation immediately, the search continues to resolve all capture sequences. Stopping mid-capture would give wildly inaccurate evaluations. The quiescence search uses a stand-pat value — if the static evaluation already beats beta, it returns immediately — and only searches captures, not quiet moves. This keeps it bounded.
+At depth zero, the search continues to resolve mandatory capture sequences. Stopping mid-capture would give inaccurate evaluations. At a quiet position it returns the static evaluation; when captures exist, it searches them without a stand-pat cutoff, because passing a mandatory capture is illegal.
+
+### Move Ordering
+
+The shared engine ranks moves by TT move, promotions and captured kings, two quiet killers per ply, and quiet-move history indexed by side/from/to. Generator indices stay unchanged so TT entries and PV moves remain valid. Capture ordering also applies in quiescence. Since moves encode individual jumps, capture scores use the immediate victim rather than exploring entire chains ahead of search.
+
+Quiet beta cutoffs update killers and add a depth-squared history bonus with bounded gravity to prevent overflow. History is halved at the start of each search; killers and history survive iterative deepening and successive turns. `resetTT()` clears all three tables for a fresh game or benchmark. Killer storage covers 256 plies; deeper nodes still use TT, tactical, and history ordering.
+
+Conservative LMR is available through the final `AIPlayer` constructor argument, `useLMR`, and remains off by default pending strength evidence. At non-root nodes with at least four plies remaining, the fifth and later ordered moves may receive a one-ply reduction. Captures, capture continuations, promotions, TT moves, killers, and moves with history scores of at least 1024 are exempt. The reduced search uses a null window around alpha; a result above alpha is re-searched at full depth and the original window. Quiescence and multi-jump turn/depth handling are unchanged. Unlike ordering alone, LMR is selective and may change scores. No LMP is added.
 
 ### Multi-Capture Handling
 
@@ -199,6 +207,67 @@ emcmake cmake -B build-web && cmake --build build-web -- -j$(nproc)
 | `matchmake` | Run automated AI vs AI games |
 | `trainNNUE` | Run the self-play training loop |
 | `bench` | Benchmark search speed at depths 1–20 |
+| `suiteBench` | Compare move-ordering stages on the fixed 100-position corpus |
+| `orderingTests` | Check ranking, cutoff learning, score equivalence, and PV/board restoration |
+
+Run cumulative ordering comparisons from `build/bin`:
+
+```powershell
+./bench.exe 15 all
+./bench.exe 15 history
+ctest --test-dir .. --output-on-failure
+```
+
+Stages are `tt` (the original ordering), `tactical` (+ captures/promotions), `killers` (+ killers), and `history` (+ history, the default engine behavior). Every depth starts with cleared TT, killers, and history, then performs iterative deepening. `all` verifies equal final scores across stages. The benchmark uses `nnue_best_v2.bin` and existing WDL/DTZ tables in the working directory.
+
+`Beta Cuts` and `First Cuts` count searched-move cutoffs in the main search, excluding quiescence and TT returns. `First %` is `100 * First Cuts / Beta Cuts`. `TT Probes` now counts all table lookups (the old column counted matching hashes); `TT Matches` preserves that old count, `TT Hits` counts depth-sufficient matches, and `TT Hit %` is `100 * TT Matches / TT Probes`. `Nodes` retains the original count of searched turn switches, including quiescence, so it can be compared with older benchmarks.
+
+The initial-position results and timing limitations are recorded in [the ordering benchmark report](benchmarks/move-ordering.md). Opening benchmarks contain few kings or promotions; use tactical positions and matches before drawing conclusions about playing strength.
+
+The fixed suite in `benchmarks/positions.txt` contains 20 unique positions each from openings (at least 20 pieces), middlegames, mandatory captures, quiet positions with kings, and endings with at most five pieces. It is frozen from seeded depth-4 TT self-play with random openings and 20% exploration. Each position records the legal encoded moves from the initial board, preserving repetition and draw-counter context when replayed.
+
+```powershell
+# From build/bin
+./suiteBench.exe 8 ../../benchmarks/positions.txt ../../benchmarks/suite-depth8.csv
+./suiteBench.exe 10 ../../benchmarks/positions.txt ../../benchmarks/suite-depth10.csv
+```
+
+Every position gets a fresh TT, killers, and history, followed by iterative deepening to the same fixed target depth. The runner compares the same four cumulative stacks as `bench`, checks score equivalence and board restoration, writes per-position counters to CSV, and reports total nodes plus the geometric mean of `TT nodes / stage nodes`. A ratio above 1 means reduced search work. The comparison between `killers` and `history` isolates history because both retain tactical ordering. First-move cutoffs are diagnostic, not the primary ranking metric.
+
+See [the fixed-suite results](benchmarks/suite-results.md) for overall and per-phase comparisons. The ending stratum is reported separately because tablebase access and repetition history affect these searches. CTest validates all 100 frozen move sequences, unique boards, the five strata, malformed input rejection, and geometric-mean calculations. To deliberately create a replacement corpus at a new path, run `./suiteBench.exe generate new-positions.txt`; ordinary benchmarks never regenerate it.
+
+Compare the existing history stack against the same stack with LMR using the frozen corpus, then play paired matches with the same checkpoint at 100 ms per move:
+
+```powershell
+# From build/bin
+./suiteBench.exe 8 ../../benchmarks/positions.txt ../../benchmarks/lmr-depth8.csv --lmr
+./suiteBench.exe 10 ../../benchmarks/positions.txt ../../benchmarks/lmr-depth10.csv --lmr
+./headlessMatch.exe nnue_best_v2.bin nnue_best_v2.bin 100 --lmr
+```
+
+In `suiteBench --lmr` mode, `history` is the baseline and `lmr` is the candidate. CSV results include score differences and reduction/re-search counters; score differences are recorded rather than treated as ordering-test failures. The geometric ratio uses history nodes / LMR nodes. In `headlessMatch --lmr`, only player A uses LMR; B keeps full-depth search. The game count must be even, and each seeded eight-turn opening is reused with colors reversed. Games run to the existing terminal/draw rules without evaluation adjudication. [LMR measurements and match results](benchmarks/lmr-results.md) include the limits of the strength evidence.
+
+Both comparison tools also accept `--lmr-late` (start reductions at the seventh ordered move) or `--lmr-endgame` (keep the fifth-move threshold, but exempt nodes with five or fewer pieces). These change one condition at a time; all other LMR guards and full-depth verification stay the same. The optional final constructor argument is `LMRPolicy::Conservative`, `LMRPolicy::Late`, or `LMRPolicy::EndgameGuard`.
+
+Suite CSVs include reductions, re-searches, accepted reduced cutoffs, confirmed re-search cutoffs, and work for reduced/re-searched calls at nodes with five or fewer pieces. A reduced result above alpha must be re-searched, so accepted reduced cutoffs are always zero. Work counters include descendants and can overlap when reduced calls nest; do not add them to total nodes. These counters cover endgame nodes reached from every position category, rather than only endgame roots. [Endgame diagnosis and controlled tuning](benchmarks/lmr-tuning-results.md) record the comparisons.
+
+Use `--only-history`, `--only-lmr`, or `--only-lmr-endgame` to measure one policy per fresh `suiteBench` process. These modes label ratios `ratio_vs_self`; compare the separate CSVs to calculate baseline ratios and score differences. CSVs also include wall-clock NPS and CPU milliseconds (main-thread user plus kernel time on Windows, process CPU time elsewhere). CPU counters have coarse resolution for very short searches.
+
+`headlessMatch` accepts optional fixed openings and per-search timing output after the policy flag. Each opening line contains hexadecimal encoded legal moves from the initial board; blank lines and `#` comments are ignored. Openings must be unique, playable, and end at a complete turn. The game count must equal twice the opening count. `--check-openings <file>` validates a fixture without loading models or tablebases. `--lmr-vs-original` compares guarded LMR as A against original LMR as B. The other LMR flags retain full-depth search as B; omitting the opening file retains the original seeded eight-turn openings.
+
+```sh
+cd build/bin
+./suiteBench.exe 8 ../../benchmarks/positions.txt ../../benchmarks/single-baseline.csv --only-history
+./suiteBench.exe 8 ../../benchmarks/positions.txt ../../benchmarks/single-guard.csv --only-lmr-endgame
+./headlessMatch.exe --check-openings ../../benchmarks/strength-openings.txt
+./headlessMatch.exe nnue_best_v2.bin nnue_best_v2.bin 200 --lmr ../../benchmarks/strength-openings.txt ../../benchmarks/original-moves.csv
+./headlessMatch.exe nnue_best_v2.bin nnue_best_v2.bin 200 --lmr-endgame ../../benchmarks/strength-openings.txt ../../benchmarks/guard-moves.csv
+./headlessMatch.exe nnue_best_v2.bin nnue_best_v2.bin 200 --lmr-vs-original ../../benchmarks/strength-openings.txt ../../benchmarks/direct-moves.csv
+```
+
+Timing CSVs record every `AIPlayer::search` call's actual elapsed time and nominal 100 ms budget, including PV completion, alongside material, move category, nodes, and completed depth. The console reports per-player mean, median, p95, and maximum elapsed search time. [Timing replication, suite uniqueness, and expanded matches](benchmarks/lmr-validation-results.md) retain the measurements and protocol.
+
+Move ordering, opt-in LMR, and the benchmark validation in this change were made by 6.1 Sol.
 
 **Web (local):**
 ```bash
